@@ -114,3 +114,33 @@ BEGIN
 END;
 GO
 
+---- GESTION DE EVALUACIONES:
+
+CREATE OR ALTER PROCEDURE GRUPO_43.modulos
+AS 
+BEGIN
+	IF OBJECT_ID('GRUPO_43.modulo', 'U') IS NOT NULL
+	DROP TABLE GRUPO_43.modulo;
+
+	CREATE TABLE GRUPO_43.modulo(
+		modulo_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
+		-- falta: modulo_curso_id char(8) CONSTRAINT PK_localidad PRIMARY KEY 
+		modulo_nombre VARCHAR(255) NOT NULL,
+		modulo_descripcion VARCHAR(255) NOT NULL
+	);
+
+	INSERT INTO GRUPO_43.modulo (modulo_id, modulo_nombre, modulo_descripcion)
+	SELECT
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY modulo_nombre, modulo_descripcion) AS VARCHAR(8)), 8),
+		modulo_nombre,
+		modulo_descripcion
+	FROM(
+		SELECT DISTINCT 
+			Modulo_Descripcion as modulo_descripcion,
+			Modulo_Nombre as modulo_nombre
+		FROM gd_esquema.Maestra
+		WHERE Modulo_Nombre IS NOT NULL AND Modulo_Descripcion IS NOT NULL
+	)modulo
+
+END
+GO
