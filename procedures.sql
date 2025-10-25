@@ -4,18 +4,24 @@ GO
 CREATE SCHEMA GRUPO_43 AUTHORIZATION dbo;
 GO
 
+IF OBJECT_ID('GRUPO_43.profesor', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.profesor;
+
+
+IF OBJECT_ID('GRUPO_43.localidad', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.localidad;
+
+CREATE TABLE GRUPO_43.localidad(
+	localidad_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
+	localidad_descripcion NVARCHAR(255) NOT NULL,
+	localidad_provincia NVARCHAR(255) NOT NULL
+);
+GO
+
 CREATE OR ALTER PROCEDURE GRUPO_43.localidades
 AS 
 BEGIN
-	IF OBJECT_ID('GRUPO_43.localidad', 'U') IS NOT NULL
-	DROP TABLE GRUPO_43.localidad;
-
-	CREATE TABLE GRUPO_43.localidad(
-		localidad_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
-		localidad_descripcion NVARCHAR(255) NOT NULL,
-		localidad_provincia NVARCHAR(255) NOT NULL
-	);
-
+	
 	INSERT INTO GRUPO_43.localidad (localidad_id, localidad_descripcion, localidad_provincia)
 	SELECT
 		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY localidad_provincia, localidad_descripcion) AS VARCHAR(8)), 8),
@@ -50,30 +56,24 @@ GO
 EXEC GRUPO_43.localidades;
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.profesores
-AS
-BEGIN
-	IF OBJECT_ID('GRUPO_43.profesor', 'U') IS NOT NULL
-	DROP TABLE GRUPO_43.profesor;
-
-	CREATE TABLE GRUPO_43.profesor(
+CREATE TABLE GRUPO_43.profesor(
 		profesor_id CHAR(8) CONSTRAINT PK_profesor PRIMARY KEY,
 		profesor_nombre NVARCHAR(255) NOT NULL,
 		profesor_apellido NVARCHAR(255) NOT NULL,
 		profesor_dni NVARCHAR(255) NOT NULL CONSTRAINT UQ_profesor_dni UNIQUE,
 		profesor_fecha_nacimiento DATETIME2(6),
-		profesor_localidad char(8),
-		profesor_mail NVARCHAR(255),
-		profesor_direccion NVARCHAR(255),
-		profesor_telefono NVARCHAR(255), 
-		CONSTRAINT DF_fecha_nacimiento DEFAULT NULL FOR profesor_fecha_nacimiento,
-		CONSTRAINT DF_localidad DEFAULT 'SIN ESPECIFICAR' FOR profesor_localidad,
-		CONSTRAINT DF_mail DEFAULT 'SIN ESPECIFICAR' FOR profesor_mail,
-		CONSTRAINT DF_direccion DEFAULT 'SIN ESPECIFICAR' FOR profesor_direccion,
-		CONSTRAINT DF_telefono DEFAULT 'SIN ESPECIFICAR' FOR profesor_telefono,
+		profesor_localidad char(8) DEFAULT '00000000',
+		profesor_mail NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+		profesor_direccion NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+		profesor_telefono NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR', 
 		FOREIGN KEY(profesor_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
-	);
+);
 
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.profesores
+AS
+BEGIN
 
 	INSERT INTO GRUPO_43.profesor(
 		profesor_id,
@@ -114,3 +114,11 @@ BEGIN
 END;
 GO
 
+EXEC GRUPO_43.profesores
+GO
+
+SELECT *
+FROM GRUPO_43.localidad
+
+SELECT *
+FROM GRUPO_43.profesor
