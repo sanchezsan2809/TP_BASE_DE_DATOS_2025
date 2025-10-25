@@ -16,6 +16,12 @@ DROP TABLE GRUPO_43.localidad;
 IF OBJECT_ID('GRUPO_43.modulo', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.modulo;
 
+IF OBJECT_ID('GRUPO_43.instancia_final', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.instancia_final;
+
+IF OBJECT_ID('GRUPO_43.inscripcion_final', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.inscripcion_final;
+
 CREATE TABLE GRUPO_43.localidad(
 	localidad_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
 	localidad_descripcion NVARCHAR(255) NOT NULL,
@@ -212,6 +218,84 @@ BEGIN
 END
 GO
 
+CREATE TABLE GRUPO_43.instancia_final(
+	instancia_final_id CHAR(8) CONSTRAINT PK_instancia_final PRIMARY KEY,
+	instancia_final_hora VARCHAR(255) NOT NULL,
+	instancia_final_descripcion VARCHAR(255) NOT NULL,
+	instancia_final_fecha DATETIME2(6)
+	-- FOREIGN KEY(instancia_final_curso) REFERENCES GRUPO43.curso(curso_id)
+);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.instancias_finales
+AS
+BEGIN
+	SET NOCOUNT ON
+	TRUNCATE TABLE GRUPO_43.instancia_final;
+
+
+	INSERT INTO GRUPO_43.instancia_final (
+	instancia_final_id,
+	instancia_final_hora, 
+	instancia_final_fecha, 
+	instancia_final_descripcion
+	--instancia_final_curso
+	)
+	 SELECT DISTINCT
+        RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY instancia_final_fecha) AS VARCHAR(8)), 8) AS instancia_final_id,
+        instancia_final_hora,
+        instancia_final_fecha,
+        instancia_final_descripcion
+    FROM (
+        SELECT DISTINCT
+            Examen_final_Hora AS instancia_final_hora,
+            Examen_final_Fecha AS instancia_final_fecha,
+            Examen_final_Descripcion AS instancia_final_descripcion
+        FROM gd_esquema.Maestra
+        WHERE Examen_final_Fecha IS NOT NULL
+    ) AS instancia;
+	-- LEFT JOIN GRUPO_43.curso ON instancia.instancia_final_curso = curso_id
+END 
+GO
+
+CREATE TABLE GRUPO_43.inscripcion_final(
+	inscripcion_final_nro BIGINT CONSTRAINT PK_inscripcion_final PRIMARY KEY,
+	inscripcion_final_fecha VARCHAR(255) NOT NULL,
+	--inscripcion_final_instancia CHAR(8),
+	--inscripcion_final_alumno_id CHAR(8),
+	--FOREIGN KEY(inscripcion_final_instancia) REFERENCES GRUPO_43.instancia_final(instancia_final_id)
+	-- FOREIGN KEY(inscripcion_final_alumno_id) REFERENCES GRUPO_43.alumno(alumno_id)
+);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.inscripciones_finales
+AS 
+BEGIN
+	SET NOCOUNT ON
+	TRUNCATE TABLE GRUPO_43.inscripcion_final;
+
+	INSERT INTO GRUPO_43.inscripcion_final(
+	inscripcion_final_nro,
+	inscripcion_final_fecha 
+	--inscripcion_final_instancia
+	--instancia_final_alumno_id
+	)
+	SELECT DISTINCT
+        inscripcion_final_nro,
+        inscripcion_final_fecha
+        --inscripcion_final_instancia
+		--inscripcion_final_alumno_id
+    FROM (
+        SELECT DISTINCT
+            Inscripcion_Final_Nro AS inscripcion_final_nro,
+            Inscripcion_Final_Fecha AS inscripcion_final_fecha
+        FROM gd_esquema.Maestra
+        WHERE Inscripcion_Final_Nro IS NOT NULL
+    ) AS inscripcion;
+	--LEFT JOIN GRUPO_43.instancia_final if ON 
+END 
+GO
+
 EXEC GRUPO_43.modulos;
 GO
 
@@ -221,5 +305,12 @@ GO
 EXEC GRUPO_43.alumnos;
 GO
 
-EXEC GRUPO_43.profesores
+EXEC GRUPO_43.profesores;
+GO
+
+
+EXEC GRUPO_43.instancias_finales;
+GO
+
+EXEC GRUPO_43.inscripciones_finales;
 GO
