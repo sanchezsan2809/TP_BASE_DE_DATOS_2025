@@ -7,9 +7,13 @@ GO
 IF OBJECT_ID('GRUPO_43.profesor', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.profesor;
 
+IF OBJECT_ID('GRUPO_43.alumno', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.alumno;
 
 IF OBJECT_ID('GRUPO_43.localidad', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.localidad;
+
+
 
 CREATE TABLE GRUPO_43.localidad(
 	localidad_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
@@ -21,7 +25,8 @@ GO
 CREATE OR ALTER PROCEDURE GRUPO_43.localidades
 AS 
 BEGIN
-	
+	TRUNCATE TABLE GRUPO_43.profesor;
+
 	INSERT INTO GRUPO_43.localidad (localidad_id, localidad_descripcion, localidad_provincia)
 	SELECT
 		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY localidad_provincia, localidad_descripcion) AS VARCHAR(8)), 8),
@@ -53,9 +58,6 @@ BEGIN
 END
 GO
 
-EXEC GRUPO_43.localidades;
-GO
-
 CREATE TABLE GRUPO_43.profesor(
 		profesor_id CHAR(8) CONSTRAINT PK_profesor PRIMARY KEY,
 		profesor_nombre NVARCHAR(255) NOT NULL,
@@ -74,6 +76,8 @@ GO
 CREATE OR ALTER PROCEDURE GRUPO_43.profesores
 AS
 BEGIN
+	
+	TRUNCATE TABLE GRUPO_43.profesor;
 
 	INSERT INTO GRUPO_43.profesor(
 		profesor_id,
@@ -114,11 +118,73 @@ BEGIN
 END;
 GO
 
+CREATE TABLE GRUPO_43.alumno(
+	alumno_legajo BIGINT CONSTRAINT PK_alumno PRIMARY KEY,
+	alumno_nombre VARCHAR(255) NOT NULL,
+	alumno_apellido VARCHAR(255) NOT NULL,
+	alumno_dni BIGINT NOT NULL CONSTRAINT UQ_alumno_dni UNIQUE,
+	alumno_fecha_nacimiento DATETIME2(6),
+	alumno_localidad CHAR(8) NOT NULL CONSTRAINT DF_alumno_localidad DEFAULT '00000000',
+    alumno_mail VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+    alumno_domicilio VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+    alumno_telefono VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+	FOREIGN KEY(alumno_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
+	);
+GO
+
+
+CREATE OR ALTER PROCEDURE GRUPO_43.alumnos
+AS
+BEGIN
+	TRUNCATE TABLE GRUPO_43.alumno;
+
+	INSERT INTO GRUPO_43.alumno(
+		alumno_legajo,
+		alumno_nombre,
+		alumno_apellido,
+		alumno_dni,
+		alumno_fecha_nacimiento,
+		alumno_localidad,
+		alumno_mail,
+		alumno_domicilio,
+		alumno_telefono
+	)
+	SELECT DISTINCT
+		Alumno_Legajo,
+		Alumno_Nombre, 
+		Alumno_Apellido,
+		Alumno_Dni,
+		Alumno_FechaNacimiento,
+		ISNULL(l.localidad_id, '00000000') AS alumno_localidad,
+		ISNULL(Alumno_Mail, 'SIN ESPECIFICAR') alumno_mail,
+		ISNULL(Alumno_Direccion, 'SIN ESPECIFICAR') alumno_direccion,
+		ISNULL(Alumno_Telefono, 'SIN ESPECIFICAR') alumno_telefono
+	FROM(
+		SELECT DISTINCT
+			Alumno_Legajo,
+			Alumno_Nombre,
+			Alumno_Apellido,
+			Alumno_Dni,
+			Alumno_FechaNacimiento,
+			Alumno_Localidad,	
+			Alumno_Provincia,
+			Alumno_Mail,
+			Alumno_Direccion,
+			Alumno_Telefono
+		FROM gd_esquema.Maestra
+		WHERE Alumno_Dni IS NOT NULL
+	)p
+	LEFT JOIN GRUPO_43.localidad l ON l.localidad_descripcion = p.Alumno_Localidad AND l.localidad_provincia = p.Alumno_Provincia;
+
+END;
+GO
+
+EXEC GRUPO_43.localidades;
+GO
+
+EXEC GRUPO_43.alumnos;
+GO
+
 EXEC GRUPO_43.profesores
 GO
 
-SELECT *
-FROM GRUPO_43.localidad
-
-SELECT *
-FROM GRUPO_43.profesor
