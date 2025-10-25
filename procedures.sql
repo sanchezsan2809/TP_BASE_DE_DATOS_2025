@@ -13,12 +13,17 @@ DROP TABLE GRUPO_43.alumno;
 IF OBJECT_ID('GRUPO_43.sede', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.sede;
 
-
 IF OBJECT_ID('GRUPO_43.localidad', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.localidad;
 
 IF OBJECT_ID('GRUPO_43.modulo', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.modulo;
+
+IF OBJECT_ID('GRUPO_43.evaluacion', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.evaluacion;
+
+IF OBJECT_ID('GRUPO_43.tp', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.tp;
 
 IF OBJECT_ID('GRUPO_43.instancia_final', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.instancia_final;
@@ -33,7 +38,7 @@ CREATE TABLE GRUPO_43.localidad(
 );
 GO
 
-/* Gestión de inscripciones*/
+/* Gestiï¿½n de inscripciones*/
 
 CREATE OR ALTER PROCEDURE GRUPO_43.localidades
 AS 
@@ -277,6 +282,97 @@ BEGIN
 END
 GO
 
+CREATE TABLE GRUPO_43.evaluacion(
+		-- evaluacion_modulo_id CHAR(8),
+		-- evaluacion_curso_id CHAR(8)
+		-- evaluacion_alumno_id CHAR(8)
+		evaluacion_instancia BIGINT NOT NULL,
+		evaluacion_presente BIT NOT NULL,
+		evaluacion_nota BIGINT NULL DEFAULT 1,
+		evaluacion_fecha DATETIME2(6),
+		-- CONSTRAINT PK_evaluacion PRIMARY KEY (evaluacion_modulo_id, evaluacion_curso_id, evaluacion_alumno_id),
+		-- FOREIGN KEY(evaluacion_modulo_id) REFERENCES GRUPO_43.modulo(modulo_id)
+		-- FOREIGN KEY(evaluacion_curso_id) REFERENCES GRUPO_43.curso(curso_id)
+		-- FOREIGN KEY(evaluacion_alumno_id) REFERENCES GRUPO_43.alumno(alumno_id)
+	);
+GO	
+
+CREATE OR ALTER PROCEDURE GRUPO_43.evaluaciones
+AS
+BEGIN
+	TRUNCATE TABLE GRUPO_43.evaluacion;
+
+INSERT INTO GRUPO_43.evaluacion(
+		-- evaluacion_modulo_id,
+		-- evaluacion_curso_id,
+		-- evaluacion_alumno_id,
+		evaluacion_instancia,
+		evaluacion_presente,
+		evaluacion_nota,
+		evaluacion_fecha
+	)
+	SELECT DISTINCT
+			-- m.modulo_id,
+			-- c.curso_id
+			-- a.alumno_id
+			Evaluacion_Curso_Instancia AS evaluacion_instancia, -- cambiar a: ma.Evaluacion_Curso_Instancia
+			Evaluacion_Curso_Presente AS evaluacion_presente, -- cambiar a: ma.Evaluacion_Curso_Presente
+			Evaluacion_Curso_Nota AS evaluacion_nota, -- cambiar a: ma.Evaluacion_Curso_Nota
+			Evaluacion_Curso_fechaEvaluacion AS evaluacion_fecha -- cambiar a: ma.Evaluacion_Curso_fechaEvaluacion
+		 FROM gd_esquema.Maestra
+ --   JOIN GRUPO_43.modulo m
+ --       ON m.modulo_nombre = ma.Modulo_Nombre
+ --       AND m.modulo_descripcion = ma.Modulo_Descripcion
+	--JOIN GRUPO_43.curso c 
+	--	ON c.curso_nombre = ma.Curso_Nombre
+	--	AND c.curso_descripcion = ma.Curso_Descripcion
+	--	AND c.curso_codigo = ma.Curso_Codigo
+	--JOIN GRUPO_43.alumno a
+	--	ON a.curso_nombre = ma.alumno
+	--	AND a.alumno_dni = ma.Alumno_Dni
+	--	AND a.alumno = ma.Alumno_Legajo
+    WHERE Evaluacion_Curso_Instancia IS NOT NULL -- cambiar por: ma.Evaluacion_Curso_Instancia
+
+END;
+GO
+
+CREATE TABLE GRUPO_43.tp(
+		-- tp_curso_id CHAR(8),
+		-- tp_alumno_id CHAR(8),
+		tp_nota BIGINT NOT NULL DEFAULT 0,
+		tp_fecha_evaluacion DATETIME2(6),
+		-- CONSTRAINT PK_tp PRIMARY KEY (tp_curso_id, tp_alumno_id),
+		-- FOREIGN KEY(tp_curso_id) REFERENCES GRUPO_43.curso(curso_id),
+		-- FOREIGN KEY(tp_alumno_id) REFERENCES GRUPO_43.alumno(alumno_id)
+	);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.tps
+AS
+BEGIN
+	TRUNCATE TABLE GRUPO_43.tp
+	
+INSERT INTO GRUPO_43.tp(
+	-- tp_curso_id,
+	-- tp_alumno_id,
+	tp_nota,
+	tp_fecha_evaluacion
+)
+SELECT
+	Trabajo_Practico_Nota,
+	Trabajo_Practico_FechaEvaluacion
+FROM(
+	SELECT DISTINCT
+		Trabajo_Practico_Nota,
+		Trabajo_Practico_FechaEvaluacion
+	FROM gd_esquema.Maestra
+	WHERE Trabajo_Practico_Nota IS NOT NULL and Trabajo_Practico_FechaEvaluacion IS NOT NULL 
+	)tp
+	-- Cuando esten todas las tablas se podrÃ¡ vincular sus FK, logica similar a la de la tabla "evaluacion"
+
+END;
+GO
+
 CREATE TABLE GRUPO_43.instancia_final(
 	instancia_final_id CHAR(8) CONSTRAINT PK_instancia_final PRIMARY KEY,
 	instancia_final_hora VARCHAR(255) NOT NULL,
@@ -365,6 +461,12 @@ EXEC GRUPO_43.sedes;
 GO
 
 EXEC GRUPO_43.alumnos;
+GO
+
+EXEC GRUPO_43.evaluaciones;
+GO
+
+EXEC GRUPO_43.tps;
 GO
 
 EXEC GRUPO_43.profesores;
