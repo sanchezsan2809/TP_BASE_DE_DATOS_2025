@@ -10,6 +10,10 @@ DROP TABLE GRUPO_43.profesor;
 IF OBJECT_ID('GRUPO_43.alumno', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.alumno;
 
+IF OBJECT_ID('GRUPO_43.sede', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.sede;
+
+
 IF OBJECT_ID('GRUPO_43.localidad', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.localidad;
 
@@ -28,6 +32,8 @@ CREATE TABLE GRUPO_43.localidad(
 	localidad_provincia NVARCHAR(255) NOT NULL
 );
 GO
+
+/* Gestión de inscripciones*/
 
 CREATE OR ALTER PROCEDURE GRUPO_43.localidades
 AS 
@@ -186,6 +192,59 @@ BEGIN
 END;
 GO
 
+CREATE TABLE GRUPO_43.sede(
+	sede_id char(8) CONSTRAINT PK_sede PRIMARY KEY,
+	sede_direccion nvarchar(255) DEFAULT 'SIN ESPECIFICAR',
+	sede_localidad char(8) DEFAULT '00000000', 
+	sede_nombre nvarchar(255),
+	sede_telefono nvarchar(255) DEFAULT 'SIN ESPECIFICAR',
+	sede_mail nvarchar(255) DEFAULT 'SIN ESPECIFICAR', 
+	FOREIGN KEY(sede_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
+)
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.sedes
+AS
+BEGIN
+	SET NOCOUNT ON;
+	
+	TRUNCATE TABLE GRUPO_43.sede;
+
+	IF NOT EXISTS(SELECT 1 FROM GRUPO_43.localidad WHERE localidad_id = '00000000')
+	BEGIN
+		INSERT INTO GRUPO_43.localidad(localidad_id, localidad_descripcion, localidad_provincia)
+		VALUES('00000000', 'SIN ESPECIFICAR', 'SIN ESPECIFICAR');
+	END
+
+	INSERT INTO GRUPO_43.sede(
+		sede_id, 
+		sede_direccion,
+		sede_localidad, 
+		sede_nombre,
+		sede_telefono, 
+		sede_mail
+	)
+	SELECT
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Sede_nombre) AS VARCHAR(8)), 8),
+		ISNULL(Sede_Direccion, 'SIN ESPECIFICAR'),
+		ISNULL(l.localidad_id, '00000000') sede_localidad,
+		Sede_Nombre,
+		ISNULL(Sede_Telefono, 'SIN ESPECIFICAR'),
+		ISNULL(Sede_Mail, 'SIN ESPECIFICAR')
+	FROM
+		(SELECT DISTINCT
+			Sede_Direccion, 
+			Sede_Localidad, 
+			Sede_Provincia,
+			Sede_Nombre, 
+			Sede_Telefono,  
+			Sede_Mail
+		FROM gd_esquema.Maestra) gd
+	LEFT JOIN GRUPO_43.localidad l 
+		ON l.localidad_descripcion = gd.Sede_Localidad
+		AND l.localidad_provincia = gd.Sede_provincia;
+END
+GO
 ---- GESTION DE EVALUACIONES:
 
 CREATE TABLE GRUPO_43.modulo(
@@ -302,6 +361,9 @@ GO
 EXEC GRUPO_43.localidades;
 GO
 
+EXEC GRUPO_43.sedes;
+GO
+
 EXEC GRUPO_43.alumnos;
 GO
 
@@ -314,3 +376,7 @@ GO
 
 EXEC GRUPO_43.inscripciones_finales;
 GO
+
+SELECT *
+FROM GRUPO_43.sede
+
