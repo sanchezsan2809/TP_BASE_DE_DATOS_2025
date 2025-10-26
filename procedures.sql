@@ -358,7 +358,7 @@ END
 GO
 
 CREATE TABLE GRUPO_43.curso(
-	curso_id char(8) CONSTRAINT PK_curso PRIMARY KEY,
+	curso_codigo char(8) CONSTRAINT PK_curso PRIMARY KEY,
 	curso_sede_id char(8),
 	curso_profesor_id char(8),
 	curso_turno_id char(8),
@@ -378,7 +378,7 @@ BEGIN
 	TRUNCATE TABLE GRUPO_43.curso;
 
 	INSERT INTO GRUPO_43.curso(
-		curso_id,
+		curso_codigo,
 		curso_sede_id, 
 		curso_profesor_id,
 		curso_turno_id,
@@ -390,7 +390,7 @@ BEGIN
 		curso_dia
 	)
 	SELECT 
-		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Curso_Nombre) AS VARCHAR(8)), 8),
+		Curso_Codigo,
 		s.sede_id,
 		p.profesor_id,
 		t.turno_id,
@@ -402,6 +402,7 @@ BEGIN
 		Curso_Dia
 	FROM (
 		SELECT DISTINCT 
+		Curso_Codigo,
 		Curso_FechaInicio,
 		Curso_FechaFin, 
 		Curso_DuracionMeses, 
@@ -425,35 +426,68 @@ GO
 
 ---- GESTION DE EVALUACIONES:
 
+CREATE TABLE GRUPO_43.detalle_modulo(
+	detalle_modulo_nombre NVARCHAR(255) CONSTRAINT PK_detalle_modulo PRIMARY KEY,
+	detalle_modulo_descripcion NVARCHAR(255)
+);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.detalle_modulos
+AS
+BEGIN
+	SET NOCOUNT ON;
+	TRUNCATE TABLE GRUPO_43.detalle_modulo;
+
+	INSERT INTO GRUPO_43.detalle_modulo(
+		detalle_modulo_nombre,
+		detalle_modulo_descripcion
+	)
+	SELECT
+		Modulo_Nombre,
+		Modulo_Descripcion
+	FROM(
+		SELECT DISTINCT
+			Modulo_Nombre,
+			Modulo_Descripcion
+		FROM gd_esquema.Maestra
+		WHERE Modulo_Nombre IS NOT NULL AND Modulo_Descripcion IS NOT NULL
+	)gd
+END	
+GO
+
 CREATE TABLE GRUPO_43.modulo(
-	modulo_id char(8) CONSTRAINT PK_modulo PRIMARY KEY,
-	-- falta: modulo_curso_id char(8) CONSTRAINT PK_localidad PRIMARY KEY 
-	modulo_nombre VARCHAR(255) NOT NULL,
-	modulo_descripcion VARCHAR(255) NOT NULL
+	modulo_id char(8),
+	modulo_curso_id char(8), 
+	modulo_detalle_modulo_nombre NVARCHAR(255),
+	FOREIGN KEY(modulo_curso_id) REFERENCES GRUPO_43.curso,
+	FOREIGN KEY(modulo_detalle_modulo_nombre) REFERENCES GRUPO_43.detalle_modulo,
+	CONSTRAINT PK_MODULO PRIMARY KEY(modulo_id, modulo_curso_id)
 );
 GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.modulos
 AS 
 BEGIN
+	SET NOCOUNT ON;
 	TRUNCATE TABLE GRUPO_43.modulo;
 	
-
-	INSERT INTO GRUPO_43.modulo (modulo_id, modulo_nombre, modulo_descripcion)
+	INSERT INTO GRUPO_43.modulo (modulo_id, modulo_curso_id, modulo_detalle_modulo_nombre)
 	SELECT
-		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY modulo_nombre, modulo_descripcion) AS VARCHAR(8)), 8),
-		modulo_nombre,
-		modulo_descripcion
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Modulo_Nombre) AS VARCHAR(8)), 8),
+		c.curso_codigo,
+		d.detalle_modulo_nombre
 	FROM(
 		SELECT DISTINCT 
-			Modulo_Descripcion as modulo_descripcion,
-			Modulo_Nombre as modulo_nombre
+			Modulo_Nombre,
+			Curso_Codigo	
 		FROM gd_esquema.Maestra
 		WHERE Modulo_Nombre IS NOT NULL AND Modulo_Descripcion IS NOT NULL
-	)modulo
-
+	)gd
+	LEFT JOIN GRUPO_43.curso c ON gd.Curso_Codigo = c.curso_codigo
+	LEFT JOIN GRUPO_43.detalle_modulo d ON gd.Modulo_Nombre = d.detalle_modulo_nombre
 END
 GO
+
 
 CREATE TABLE GRUPO_43.evaluacion(
 		-- evaluacion_modulo_id CHAR(8),
@@ -744,7 +778,8 @@ GO
 EXEC GRUPO_43.cursos;
 GO
 
-SELECT * FROM GRUPO_43.curso
+EXEC GRUPO_43.detalle_modulos;
+GO
 
 EXEC GRUPO_43.modulos;
 GO
@@ -783,3 +818,6 @@ GO
 
 EXEC GRUPO_43.pagos;
 GO
+
+SELECT * 
+FROM GRUPO_43.modulo
