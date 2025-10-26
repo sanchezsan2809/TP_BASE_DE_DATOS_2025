@@ -1,4 +1,4 @@
-USE GD2C2025
+﻿USE GD2C2025
 GO
 
 CREATE SCHEMA GRUPO_43 AUTHORIZATION dbo;
@@ -30,6 +30,12 @@ DROP TABLE GRUPO_43.instancia_final;
 
 IF OBJECT_ID('GRUPO_43.inscripcion_final', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.inscripcion_final;
+
+IF OBJECT_ID('GRUPO_43.factura', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.factura;
+
+IF OBJECT_ID('GRUPO_43.detalle_factura', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.detalle_factura;
 
 CREATE TABLE GRUPO_43.localidad(
 	localidad_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
@@ -451,6 +457,79 @@ BEGIN
 END 
 GO
 
+---- GESTION DE PAGOS
+
+CREATE TABLE GRUPO_43.factura(
+	fact_nro BIGINT CONSTRAINT PK_factura PRIMARY KEY,
+	fact_fecha_emision DATETIME2(6),
+	fact_fecha_venc DATETIME2(6),
+	fact_importe_total DECIMAL(18,2),
+	fact_alumno_legajo BIGINT NULL,
+	FOREIGN KEY(fact_alumno_legajo) REFERENCES GRUPO_43.alumno(alumno_legajo)
+	);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.facturas
+AS
+BEGIN
+	TRUNCATE TABLE GRUPO_43.factura;
+
+	INSERT INTO GRUPO_43.factura(
+		fact_nro,
+		fact_fecha_emision,
+		fact_fecha_venc,
+		fact_importe_total,
+		fact_alumno_legajo
+	)
+	SELECT DISTINCT
+		p.Factura_Numero,
+		p.Factura_FechaEmision,
+		p.Factura_FechaVencimiento,
+		p.Factura_Total,
+		a.alumno_legajo
+	FROM gd_esquema.Maestra p
+	INNER JOIN GRUPO_43.alumno a ON a.alumno_legajo = p.Alumno_Legajo
+	WHERE p.Factura_Numero IS NOT NULL
+
+END;
+GO
+
+CREATE TABLE GRUPO_43.detalle_factura(
+	detalle_factura_fact_id BIGINT NOT NULL,
+	detalle_factura_curso_id BIGINT NOT NULL,
+	detalle_factura_periodo_anio BIGINT NOT NULL,
+	detalle_factura_periodo_mes BIGINT NOT NULL,
+	detalle_factura_importe DECIMAL(8,2),
+	FOREIGN KEY(detalle_factura_fact_id) REFERENCES GRUPO_43.factura(fact_nro),
+	CONSTRAINT PK_detalle_factura PRIMARY KEY (detalle_factura_fact_id,detalle_factura_curso_id,detalle_factura_periodo_anio,detalle_factura_periodo_mes)
+	);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.factura_detalles
+AS
+BEGIN
+	TRUNCATE TABLE GRUPO_43.detalle_factura;
+
+	INSERT INTO GRUPO_43.detalle_factura(
+		detalle_factura_fact_id,
+		detalle_factura_curso_id,
+		detalle_factura_periodo_anio,
+		detalle_factura_periodo_mes,
+		detalle_factura_importe
+	)
+	SELECT DISTINCT
+		f.fact_nro,
+		p.Curso_Codigo,
+		p.Periodo_Anio,
+		p.Periodo_Mes,
+		p.Detalle_Factura_Importe
+	FROM gd_esquema.Maestra p
+	INNER JOIN GRUPO_43.factura f ON f.fact_nro = p.Factura_Numero
+	WHERE p.Curso_Codigo IS NOT NULL
+
+END;
+GO
+
 EXEC GRUPO_43.modulos;
 GO
 
@@ -479,6 +558,11 @@ GO
 EXEC GRUPO_43.inscripciones_finales;
 GO
 
+EXEC GRUPO_43.facturas;
+GO
+
+EXEC GRUPO_43.factura_detalles;
+GO
+
 SELECT *
 FROM GRUPO_43.sede
-
