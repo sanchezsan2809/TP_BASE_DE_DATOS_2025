@@ -210,6 +210,30 @@ BEGIN
 END;
 GO
 
+CREATE TABLE GRUPO_43.turno(
+	turno_id char(8),
+	turno_descripcion NVARCHAR(255)
+);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.turnos
+AS
+BEGIN
+	SET NOCOUNT ON;
+	TRUNCATE TABLE GRUPO_43.turno;
+
+	INSERT INTO GRUPO_43.turno
+	SELECT
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Curso_Turno) AS VARCHAR(8)), 8),
+		Curso_Turno
+	FROM (
+		SELECT DISTINCT Curso_Turno
+		FROM gd_esquema.Maestra
+		WHERE Curso_Turno IS NOT NULL
+	)gd
+END
+GO
+
 CREATE TABLE GRUPO_43.sede(
 	sede_id char(8) CONSTRAINT PK_sede PRIMARY KEY,
 	sede_direccion nvarchar(255) DEFAULT 'SIN ESPECIFICAR',
@@ -299,6 +323,7 @@ CREATE TABLE GRUPO_43.detalle_curso(
 	FOREIGN KEY(detalle_curso_categoria) REFERENCES GRUPO_43.categoria
 )
 GO
+
 
 CREATE OR ALTER PROCEDURE GRUPO_43.detalles_curso
 AS
@@ -601,6 +626,9 @@ BEGIN
 END;
 GO
 
+EXEC GRUPO_43.turnos;
+GO
+
 EXEC GRUPO_43.categorias;
 GO
 
@@ -640,3 +668,7 @@ GO
 
 EXEC GRUPO_43.factura_detalles;
 GO
+
+
+SELECT *
+FROM GRUPO_43.turno
