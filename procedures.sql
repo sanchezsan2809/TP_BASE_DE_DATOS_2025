@@ -1,4 +1,4 @@
-﻿USE GD2C2025
+﻿﻿USE GD2C2025
 GO
 
 CREATE SCHEMA GRUPO_43 AUTHORIZATION dbo;
@@ -43,6 +43,9 @@ DROP TABLE GRUPO_43.factura;
 
 IF OBJECT_ID('GRUPO_43.detalle_factura', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.detalle_factura;
+
+IF OBJECT_ID('GRUPO_43.pago', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.pago;
 
 CREATE TABLE GRUPO_43.localidad(
 	localidad_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
@@ -623,6 +626,41 @@ BEGIN
 	INNER JOIN GRUPO_43.factura f ON f.fact_nro = p.Factura_Numero
 	WHERE p.Curso_Codigo IS NOT NULL
 
+	-- ACLARACIÓN: p.Curso_Codigo en realidad deberia salir de la tabla CURSOS, por el momento la implementacion cumple con su objetivo suponiendo que el codigo sera su PK
+END;
+GO
+
+CREATE TABLE GRUPO_43.pago(
+	pago_id CHAR(8) CONSTRAINT PK_pago PRIMARY KEY,
+	pago_fact_id BIGINT NOT NULL,
+	pago_fecha DATETIME2(6) NOT NULL,
+	pago_importe DECIMAL(18,2) NOT NULL,
+	pago_medio_de_pago VARCHAR(255),
+	FOREIGN KEY(pago_fact_id) REFERENCES GRUPO_43.factura(fact_nro)
+	);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.pagos
+AS
+BEGIN
+	TRUNCATE TABLE GRUPO_43.pago;
+
+	INSERT INTO GRUPO_43.pago(
+		pago_id,
+		pago_fact_id,
+		pago_fecha,
+		pago_importe,
+		pago_medio_de_pago
+	)
+	SELECT DISTINCT
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY p.Pago_Fecha) AS VARCHAR(8)), 8) AS pago_id,
+		p.Factura_Numero,
+		p.Pago_Fecha,
+		p.Pago_Importe,
+		p.Pago_MedioPago
+	FROM gd_esquema.Maestra p
+	INNER JOIN GRUPO_43.factura f ON f.fact_nro = p.Factura_Numero
+	WHERE p.Pago_Fecha IS NOT NULL
 END;
 GO
 
@@ -669,6 +707,11 @@ GO
 EXEC GRUPO_43.factura_detalles;
 GO
 
+<<<<<<< HEAD
 
 SELECT *
 FROM GRUPO_43.turno
+=======
+EXEC GRUPO_43.pagos;
+GO
+>>>>>>> 83842dde50ae10467df1dd6557cda9862f096e29
