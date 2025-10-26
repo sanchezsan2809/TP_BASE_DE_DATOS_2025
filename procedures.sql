@@ -270,10 +270,10 @@ CREATE TABLE GRUPO_43.categoria(
 )
 GO
 
-
 CREATE OR ALTER PROCEDURE GRUPO_43.categorias
 AS
 BEGIN
+	
 	SET NOCOUNT ON;
 	TRUNCATE TABLE GRUPO_43.categoria;
 
@@ -285,9 +285,9 @@ BEGIN
 		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Curso_Categoria) AS VARCHAR(8)), 8),
 		Curso_Categoria
 	FROM(
-		SELECT Curso_Categoria
-		FROM gd_esquema.Maestra)gd
-
+		SELECT DISTINCT Curso_Categoria
+		FROM gd_esquema.Maestra
+		WHERE Curso_Categoria IS NOT NULL)gd
 END
 GO
 
@@ -298,6 +298,34 @@ CREATE TABLE GRUPO_43.detalle_curso(
 	detalle_curso_categoria char(8), 
 	FOREIGN KEY(detalle_curso_categoria) REFERENCES GRUPO_43.categoria
 )
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.detalles_curso
+AS
+BEGIN
+	TRUNCATE TABLE GRUPO_43.detalle_curso;
+	SET NOCOUNT ON;
+
+	INSERT INTO GRUPO_43.detalle_curso(
+		detalle_curso_id,
+		detalle_curso_nombre,
+		detalle_curso_descripcion,
+		detalle_curso_categoria
+	)
+	SELECT 
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Curso_Nombre) AS VARCHAR(8)), 8),
+		Curso_Nombre,
+		Curso_Descripcion,
+		c.categoria_id
+	FROM (
+		SELECT DISTINCT
+			Curso_Nombre,
+			Curso_Descripcion,
+			Curso_Categoria
+		FROM gd_esquema.Maestra
+	)gd JOIN GRUPO_43.categoria c ON categoria_descripcion = gd.Curso_Categoria
+END
+GO
 
 ---- GESTION DE EVALUACIONES:
 
@@ -573,6 +601,12 @@ BEGIN
 END;
 GO
 
+EXEC GRUPO_43.categorias;
+GO
+
+EXEC GRUPO_43.detalles_curso;
+GO
+
 EXEC GRUPO_43.modulos;
 GO
 
@@ -606,6 +640,3 @@ GO
 
 EXEC GRUPO_43.factura_detalles;
 GO
-
-SELECT *
-FROM GRUPO_43.sede
