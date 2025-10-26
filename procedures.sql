@@ -19,6 +19,13 @@ DROP TABLE GRUPO_43.localidad;
 IF OBJECT_ID('GRUPO_43.modulo', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.modulo;
 
+IF OBJECT_ID('GRUPO_43.detalle_curso', 'U') IS NOT NULL
+DROP TABLE GRUPO_53.detalle_curso;
+
+
+IF OBJECT_ID('GRUPO_43.categoria', 'U') IS NOT NULL
+DROP TABLE GRUPO_53.categoria;
+
 IF OBJECT_ID('GRUPO_43.evaluacion', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.evaluacion;
 
@@ -256,6 +263,42 @@ BEGIN
 		AND l.localidad_provincia = gd.Sede_provincia;
 END
 GO
+
+CREATE TABLE GRUPO_43.categoria(
+	 categoria_id char(8) CONSTRAINT PK_categoria PRIMARY KEY,
+	 categoria_descripcion NVARCHAR(255)
+)
+GO
+
+
+CREATE OR ALTER PROCEDURE GRUPO_43.categorias
+AS
+BEGIN
+	SET NOCOUNT ON;
+	TRUNCATE TABLE GRUPO_43.categoria;
+
+	INSERT INTO GRUPO_43.categoria(
+		categoria_id,
+		categoria_descripcion
+	)
+	SELECT
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Curso_Categoria) AS VARCHAR(8)), 8),
+		Curso_Categoria
+	FROM(
+		SELECT Curso_Categoria
+		FROM gd_esquema.Maestra)gd
+
+END
+GO
+
+CREATE TABLE GRUPO_43.detalle_curso(
+	detalle_curso_id char(8) CONSTRAINT PK_detalle_curso PRIMARY KEY,
+	detalle_curso_nombre NVARCHAR(255),
+	detalle_curso_descripcion NVARCHAR(255),
+	detalle_curso_categoria char(8), 
+	FOREIGN KEY(detalle_curso_categoria) REFERENCES GRUPO_43.categoria
+)
+
 ---- GESTION DE EVALUACIONES:
 
 CREATE TABLE GRUPO_43.modulo(
@@ -381,8 +424,8 @@ GO
 
 CREATE TABLE GRUPO_43.instancia_final(
 	instancia_final_id CHAR(8) CONSTRAINT PK_instancia_final PRIMARY KEY,
-	instancia_final_hora VARCHAR(255) NOT NULL,
-	instancia_final_descripcion VARCHAR(255) NOT NULL,
+	instancia_final_hora NVARCHAR(255) NOT NULL,
+	instancia_final_descripcion NVARCHAR(255) NOT NULL,
 	instancia_final_fecha DATETIME2(6)
 	-- FOREIGN KEY(instancia_final_curso) REFERENCES GRUPO43.curso(curso_id)
 );
