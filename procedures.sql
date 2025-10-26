@@ -456,12 +456,11 @@ END
 GO
 
 CREATE TABLE GRUPO_43.modulo(
-	modulo_id char(8),
 	modulo_curso_id char(8), 
 	modulo_detalle_modulo_nombre NVARCHAR(255),
 	FOREIGN KEY(modulo_curso_id) REFERENCES GRUPO_43.curso,
 	FOREIGN KEY(modulo_detalle_modulo_nombre) REFERENCES GRUPO_43.detalle_modulo,
-	CONSTRAINT PK_MODULO PRIMARY KEY(modulo_id, modulo_curso_id)
+	CONSTRAINT PK_MODULO PRIMARY KEY (modulo_curso_id, modulo_detalle_modulo_nombre)
 );
 GO
 
@@ -471,9 +470,8 @@ BEGIN
 	SET NOCOUNT ON;
 	TRUNCATE TABLE GRUPO_43.modulo;
 	
-	INSERT INTO GRUPO_43.modulo (modulo_id, modulo_curso_id, modulo_detalle_modulo_nombre)
+	INSERT INTO GRUPO_43.modulo (modulo_curso_id, modulo_detalle_modulo_nombre)
 	SELECT
-		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Modulo_Nombre) AS VARCHAR(8)), 8),
 		c.curso_codigo,
 		d.detalle_modulo_nombre
 	FROM(
@@ -490,43 +488,62 @@ GO
 
 
 CREATE TABLE GRUPO_43.evaluacion(
-		-- evaluacion_modulo_id CHAR(8),
-		-- evaluacion_curso_id CHAR(8)
-		-- evaluacion_alumno_id CHAR(8)
+		evaluacion_modulo_nombre NVARCHAR(255),
+		evaluacion_curso_id CHAR(8),
+		evaluacion_alumno_legajo BIGINT,
 		evaluacion_instancia BIGINT NOT NULL,
 		evaluacion_presente BIT NOT NULL,
 		evaluacion_nota BIGINT NULL DEFAULT 1,
 		evaluacion_fecha DATETIME2(6),
-		-- CONSTRAINT PK_evaluacion PRIMARY KEY (evaluacion_modulo_id, evaluacion_curso_id, evaluacion_alumno_id),
-		-- FOREIGN KEY(evaluacion_modulo_id) REFERENCES GRUPO_43.modulo(modulo_id)
-		-- FOREIGN KEY(evaluacion_curso_id) REFERENCES GRUPO_43.curso(curso_id)
-		-- FOREIGN KEY(evaluacion_alumno_id) REFERENCES GRUPO_43.alumno(alumno_id)
+		CONSTRAINT PK_evaluacion PRIMARY KEY (evaluacion_modulo_nombre, evaluacion_curso_id, evaluacion_alumno_legajo),
+		FOREIGN KEY(evaluacion_curso_id,evaluacion_modulo_nombre) REFERENCES GRUPO_43.modulo,
+		FOREIGN KEY(evaluacion_alumno_legajo) REFERENCES GRUPO_43.alumno
 	);
 GO	
 
 CREATE OR ALTER PROCEDURE GRUPO_43.evaluaciones
 AS
 BEGIN
+
+	SET NOCOUNT ON;
 	TRUNCATE TABLE GRUPO_43.evaluacion;
 
-INSERT INTO GRUPO_43.evaluacion(
-		-- evaluacion_modulo_id,
-		-- evaluacion_curso_id,
-		-- evaluacion_alumno_id,
+	INSERT INTO GRUPO_43.evaluacion(
+		evaluacion_modulo_nombre,
+		evaluacion_curso_id,
+		evaluacion_alumno_legajo,
 		evaluacion_instancia,
 		evaluacion_presente,
 		evaluacion_nota,
 		evaluacion_fecha
 	)
+	SELECT
+		Modulo_Nombre,
+		Curso_Codigo, 
+		Alumno_Legajo, 
+		Evaluacion_Curso_Instancia, 
+		Evaluacion_Curso_Presente, 
+		Evaluacion_Curso_Nota, 
+		Evaluacion_Curso_fechaEvaluacion
+	FROM(
 	SELECT DISTINCT
-			-- m.modulo_id,
-			-- c.curso_id
-			-- a.alumno_id
-			Evaluacion_Curso_Instancia AS evaluacion_instancia, -- cambiar a: ma.Evaluacion_Curso_Instancia
-			Evaluacion_Curso_Presente AS evaluacion_presente, -- cambiar a: ma.Evaluacion_Curso_Presente
-			Evaluacion_Curso_Nota AS evaluacion_nota, -- cambiar a: ma.Evaluacion_Curso_Nota
-			Evaluacion_Curso_fechaEvaluacion AS evaluacion_fecha -- cambiar a: ma.Evaluacion_Curso_fechaEvaluacion
-		 FROM gd_esquema.Maestra
+			Modulo_Nombre,
+			Curso_Codigo,
+			Alumno_Legajo,
+			Evaluacion_Curso_Instancia, 
+			Evaluacion_Curso_Presente, -- cambiar a: ma.Evaluacion_Curso_Presente
+			Evaluacion_Curso_Nota, -- cambiar a: ma.Evaluacion_Curso_Nota
+			Evaluacion_Curso_fechaEvaluacion -- cambiar a: ma.Evaluacion_Curso_fechaEvaluacion
+	FROM gd_esquema.Maestra
+	WHERE
+		Modulo_Nombre IS NOT NULL AND
+		Curso_Codigo IS NOT NULL AND 
+		Alumno_Legajo IS NOT NULL AND
+		Evaluacion_Curso_Instancia IS NOT NULL AND
+		Evaluacion_Curso_Presente IS NOT NULL AND
+		Evaluacion_Curso_Nota IS NOT NULL AND
+		Evaluacion_Curso_fechaEvaluacion IS NOT NULL
+	)gd
  --   JOIN GRUPO_43.modulo m
  --       ON m.modulo_nombre = ma.Modulo_Nombre
  --       AND m.modulo_descripcion = ma.Modulo_Descripcion
@@ -538,7 +555,7 @@ INSERT INTO GRUPO_43.evaluacion(
 	--	ON a.curso_nombre = ma.alumno
 	--	AND a.alumno_dni = ma.Alumno_Dni
 	--	AND a.alumno = ma.Alumno_Legajo
-    WHERE Evaluacion_Curso_Instancia IS NOT NULL -- cambiar por: ma.Evaluacion_Curso_Instancia
+-- cambiar por: ma.Evaluacion_Curso_Instancia
 
 END;
 GO
