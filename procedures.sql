@@ -20,11 +20,13 @@ IF OBJECT_ID('GRUPO_43.modulo', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.modulo;
 
 IF OBJECT_ID('GRUPO_43.detalle_curso', 'U') IS NOT NULL
-DROP TABLE GRUPO_53.detalle_curso;
-
+DROP TABLE GRUPO_43.detalle_curso;
 
 IF OBJECT_ID('GRUPO_43.categoria', 'U') IS NOT NULL
-DROP TABLE GRUPO_53.categoria;
+DROP TABLE GRUPO_43.categoria;
+
+IF OBJECT_ID('GRUPO_43.curso', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.curso;
 
 IF OBJECT_ID('GRUPO_43.evaluacion', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.evaluacion;
@@ -355,6 +357,72 @@ BEGIN
 END
 GO
 
+CREATE TABLE GRUPO_43.curso(
+	curso_id char(8) CONSTRAINT PK_curso PRIMARY KEY,
+	curso_sede_id char(8),
+	curso_profesor_id char(8),
+	curso_turno_id char(8),
+	curso_detalle_curso_id char(8),
+	curso_dia nvarchar(255),
+	curso_fecha_inicio nvarchar(255),
+	curso_fecha_fin nvarchar(255),
+	curso_duracion BIGINT,
+	curso_precio_mensual decimal(38,2)
+);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.cursos
+AS
+BEGIN
+	SET NOCOUNT ON;
+	TRUNCATE TABLE GRUPO_43.curso;
+
+	INSERT INTO GRUPO_43.curso(
+		curso_id,
+		curso_sede_id, 
+		curso_profesor_id,
+		curso_turno_id,
+		curso_detalle_curso_id,
+		curso_fecha_inicio, 
+		curso_fecha_fin,
+		curso_duracion,
+		curso_precio_mensual,
+		curso_dia
+	)
+	SELECT 
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Curso_Nombre) AS VARCHAR(8)), 8),
+		s.sede_id,
+		p.profesor_id,
+		t.turno_id,
+		d.detalle_curso_id, 
+		Curso_FechaInicio,
+		Curso_FechaFin,
+		Curso_DuracionMeses, 
+		Curso_PrecioMensual, 
+		Curso_Dia
+	FROM (
+		SELECT DISTINCT 
+		Curso_FechaInicio,
+		Curso_FechaFin, 
+		Curso_DuracionMeses, 
+		Curso_PrecioMensual, 
+		Curso_Dia, 
+		Sede_Nombre, 
+		Profesor_Dni, 
+		Curso_Turno, 
+		Curso_Nombre
+		FROM gd_esquema.Maestra
+	)gd
+	LEFT JOIN GRUPO_43.sede s ON gd.Sede_Nombre = s.sede_nombre
+	LEFT JOIN GRUPO_43.profesor p ON gd.Profesor_Dni = p.profesor_dni
+	LEFT JOIN GRUPO_43.turno t ON gd.Curso_Turno = t.turno_descripcion
+	LEFT JOIN GRUPO_43.detalle_curso d ON gd.Curso_Nombre = d.detalle_curso_nombre 
+	WHERE gd.Curso_Nombre IS NOT NULL
+
+END
+GO
+
+
 ---- GESTION DE EVALUACIONES:
 
 CREATE TABLE GRUPO_43.modulo(
@@ -673,6 +741,11 @@ GO
 EXEC GRUPO_43.detalles_curso;
 GO
 
+EXEC GRUPO_43.cursos;
+GO
+
+SELECT * FROM GRUPO_43.curso
+
 EXEC GRUPO_43.modulos;
 GO
 
@@ -707,11 +780,6 @@ GO
 EXEC GRUPO_43.factura_detalles;
 GO
 
-<<<<<<< HEAD
 
-SELECT *
-FROM GRUPO_43.turno
-=======
 EXEC GRUPO_43.pagos;
 GO
->>>>>>> 83842dde50ae10467df1dd6557cda9862f096e29
