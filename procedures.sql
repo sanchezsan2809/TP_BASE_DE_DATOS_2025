@@ -1,4 +1,4 @@
-﻿﻿USE GD2C2025
+﻿﻿﻿USE GD2C2025
 GO
 
 CREATE SCHEMA GRUPO_43 AUTHORIZATION dbo;
@@ -841,6 +841,152 @@ BEGIN
 END;
 GO
 
+-- GESTION DE ENCUESTAS
+
+CREATE TABLE GRUPO_43.encuesta(
+    encuesta_curso_id CHAR(8) NOT NULL,
+    encuesta_observaciones VARCHAR(255) NOT NULL,
+    encuesta_fecha_registro DATETIME2(6) NOT NULL,
+    FOREIGN KEY(encuesta_curso_id) REFERENCES GRUPO_43.curso(curso_codigo),
+    CONSTRAINT PK_encuesta PRIMARY KEY (encuesta_curso_id,encuesta_fecha_registro)
+);
+GO 
+
+CREATE OR ALTER PROCEDURE GRUPO_43.encuestas
+AS
+BEGIN
+    TRUNCATE TABLE GRUPO_43.encuesta;
+
+    INSERT INTO GRUPO_43.encuesta(
+        encuesta_curso_id,
+        encuesta_observaciones,
+        encuesta_fecha_registro
+    )
+    SELECT DISTINCT
+        p.Curso_Codigo,
+        p.Encuesta_Observacion,
+        p.Encuesta_FechaRegistro
+    FROM gd_esquema.Maestra p
+    INNER JOIN GRUPO_43.curso c ON c.curso_codigo = p.Curso_Codigo
+    WHERE p.Encuesta_Observacion IS NOT NULL 
+      AND p.Encuesta_FechaRegistro IS NOT NULL;
+END;
+GO
+
+CREATE TABLE GRUPO_43.pregunta(
+    pregunta_id CHAR(8) CONSTRAINT PK_pregunta PRIMARY KEY,
+    pregunta_contenido VARCHAR(255) NOT NULL
+);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.preguntas
+AS
+BEGIN
+    TRUNCATE TABLE GRUPO_43.pregunta;
+
+    INSERT INTO GRUPO_43.pregunta(
+        pregunta_id,
+        pregunta_contenido
+    )
+    SELECT DISTINCT
+        RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY CAST(REPLACE(REPLACE(p.pregunta, 'Pregunta N°:', ''), ' ', '') AS INT)) AS VARCHAR(8)), 8) AS pregunta_id,
+        p.pregunta
+    FROM (
+        SELECT DISTINCT 
+            Encuesta_Pregunta1 as pregunta
+        FROM gd_esquema.Maestra
+        WHERE Encuesta_Pregunta1 IS NOT NULL
+
+        UNION
+
+        SELECT DISTINCT
+            Encuesta_Pregunta2 as pregunta
+        FROM gd_esquema.Maestra
+        WHERE Encuesta_Pregunta2 IS NOT NULL
+
+        UNION
+
+        SELECT DISTINCT
+            Encuesta_Pregunta3 as pregunta
+        FROM gd_esquema.Maestra
+        WHERE Encuesta_Pregunta3 IS NOT NULL
+        
+        UNION
+        
+        SELECT DISTINCT
+            Encuesta_Pregunta4 as pregunta
+        FROM gd_esquema.Maestra
+        WHERE Encuesta_Pregunta4 IS NOT NULL)p
+    WHERE p.pregunta IS NOT NULL
+END;
+GO
+
+CREATE TABLE GRUPO_43.detalle_encuesta(
+    detalle_pregunta_id CHAR(8),
+    detalle_encuesta_curso_id CHAR(8) NOT NULL,
+    detalle_encuesta_fecha_registro DATETIME2(6) NOT NULL,
+    detalle_encuesta_nota BIGINT NOT NULL,
+    CONSTRAINT FK_detalle_encuesta 
+        FOREIGN KEY(detalle_encuesta_curso_id,detalle_encuesta_fecha_registro) 
+        REFERENCES GRUPO_43.encuesta(encuesta_curso_id,encuesta_fecha_registro),
+    CONSTRAINT FK_detalle_encuesta_pregunta
+        FOREIGN KEY (detalle_pregunta_id)
+        REFERENCES GRUPO_43.pregunta(pregunta_id),
+    CONSTRAINT PK_detalle_encuesta
+        PRIMARY KEY (detalle_pregunta_id,detalle_encuesta_curso_id,detalle_encuesta_fecha_registro)
+);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.detalle_encuestas
+AS
+BEGIN
+    TRUNCATE TABLE GRUPO_43.detalle_encuesta;
+
+    INSERT INTO GRUPO_43.detalle_encuesta(
+        detalle_pregunta_id,
+        detalle_encuesta_curso_id,
+        detalle_encuesta_fecha_registro,
+        detalle_encuesta_nota
+    )
+    SELECT DISTINCT
+        q.pregunta_id,
+        m.Curso_Codigo,
+        m.Encuesta_FechaRegistro,
+        m.Encuesta_Nota
+    FROM (
+        SELECT DISTINCT 
+            Curso_Codigo, Encuesta_FechaRegistro, 
+            Encuesta_Pregunta1 AS pregunta, 
+            Encuesta_Nota1 AS Encuesta_Nota
+        FROM gd_esquema.Maestra
+        WHERE Encuesta_Pregunta1 IS NOT NULL
+        UNION ALL
+        SELECT DISTINCT 
+            Curso_Codigo, Encuesta_FechaRegistro, 
+            Encuesta_Pregunta2 AS pregunta, 
+            Encuesta_Nota2 AS Encuesta_Nota
+        FROM gd_esquema.Maestra
+        WHERE Encuesta_Pregunta2 IS NOT NULL
+        UNION ALL
+        SELECT DISTINCT 
+            Curso_Codigo, Encuesta_FechaRegistro, 
+            Encuesta_Pregunta3 AS pregunta, 
+            Encuesta_Nota3 AS Encuesta_Nota
+        FROM gd_esquema.Maestra
+        WHERE Encuesta_Pregunta3 IS NOT NULL
+        UNION ALL
+        SELECT DISTINCT 
+            Curso_Codigo, Encuesta_FechaRegistro, 
+            Encuesta_Pregunta4 AS pregunta, 
+            Encuesta_Nota4 AS Encuesta_Nota
+        FROM gd_esquema.Maestra
+        WHERE Encuesta_Pregunta4 IS NOT NULL
+    ) m
+    INNER JOIN GRUPO_43.pregunta q ON q.pregunta_contenido = m.pregunta
+    INNER JOIN GRUPO_43.curso c ON c.curso_codigo = m.Curso_Codigo;
+END;
+GO
+
 EXEC GRUPO_43.turnos;
 GO
 
@@ -898,4 +1044,13 @@ GO
 
 
 EXEC GRUPO_43.pagos;
+GO
+
+EXEC GRUPO_43.encuestas;
+GO
+
+EXEC GRUPO_43.preguntas;
+GO
+
+EXEC GRUPO_43.detalle_encuestas;
 GO
