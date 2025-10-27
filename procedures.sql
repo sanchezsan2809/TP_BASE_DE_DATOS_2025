@@ -810,9 +810,8 @@ BEGIN
 		p.Detalle_Factura_Importe
 	FROM gd_esquema.Maestra p
 	INNER JOIN GRUPO_43.factura f ON f.fact_nro = p.Factura_Numero
+	INNER JOIN GRUPO_43.curso c ON c.curso_codigo = p.Curso_Codigo
 	WHERE p.Curso_Codigo IS NOT NULL
-
-	-- ACLARACIÓN: p.Curso_Codigo en realidad deberia salir de la tabla CURSOS, por el momento la implementacion cumple con su objetivo suponiendo que el codigo sera su PK
 END;
 GO
 
