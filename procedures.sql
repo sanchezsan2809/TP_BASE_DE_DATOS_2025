@@ -741,6 +741,60 @@ BEGIN
 	AND gd.Examen_Final_Hora = i.instancia_final_hora
 END 
 GO
+---- GESTIÓN DE EVALUACIONES FINALES
+CREATE TABLE GRUPO_43.evaluacion_final(
+	final_id char(8) CONSTRAINT PK_evaluacion_final PRIMARY KEY,
+	final_alumno_legajo BIGINT,
+	final_instancia_final char(8),
+	final_nota BIGINT,
+	final_profesor char(8),
+	final_presente bit,
+	FOREIGN KEY(final_alumno_legajo) REFERENCES GRUPO_43.alumno,
+	FOREIGN KEY(final_instancia_final) REFERENCES GRUPO_43.instancia_final,
+	FOREIGN KEY(final_profesor) REFERENCES GRUPO_43.profesor
+);
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.evaluaciones_final
+AS
+BEGIN
+	SET NOCOUNT ON;
+	TRUNCATE TABLE GRUPO_43.evaluacion_final;
+
+	INSERT INTO GRUPO_43.evaluacion_final(
+		final_id, 
+		final_alumno_legajo,
+		final_instancia_final, 
+		final_nota,
+		final_profesor, 
+		final_presente
+	)
+	SELECT
+		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Examen_Final_Descripcion) AS VARCHAR(8)), 8),
+		a.alumno_legajo,
+		i.instancia_final_id,
+		Evaluacion_Final_Nota, 
+		p.profesor_id, 
+		Evaluacion_Final_Presente
+	FROM (
+		SELECT DISTINCT
+			Alumno_Legajo, 
+			Examen_Final_Descripcion, 
+			Evaluacion_Final_Nota, 
+			Profesor_Dni, 
+			Evaluacion_Final_Presente
+		FROM gd_esquema.Maestra
+		WHERE
+			Alumno_Legajo IS NOT NULL
+			AND Examen_Final_Descripcion IS NOT NULL
+			AND Profesor_nombre IS NOT NULL
+			AND Evaluacion_Final_Presente IS NOT NULL
+	)gd
+ 	JOIN GRUPO_43.alumno a ON a.alumno_legajo = gd.Alumno_Legajo
+	JOIN GRUPO_43.profesor p ON p.profesor_dni = gd.Profesor_Dni
+	JOIN GRUPO_43.instancia_final i ON i.instancia_final_descripcion = Examen_Final_Descripcion 
+END
+GO
 
 ---- GESTION DE PAGOS
 
@@ -1014,9 +1068,6 @@ GO
 EXEC GRUPO_43.inscripciones_curso;
 GO
 
-SELECT * 
-FROM GRUPO_43.inscripcion_curso
-
 EXEC GRUPO_43.detalle_modulos;
 GO
 
@@ -1041,11 +1092,13 @@ GO
 EXEC GRUPO_43.profesores;
 GO
 
-
 EXEC GRUPO_43.instancias_finales;
 GO
 
 EXEC GRUPO_43.inscripciones_finales;
+GO
+
+EXEC GRUPO_43.evaluaciones_final;
 GO
 
 EXEC GRUPO_43.facturas;
@@ -1053,7 +1106,6 @@ GO
 
 EXEC GRUPO_43.factura_detalles;
 GO
-
 
 EXEC GRUPO_43.pagos;
 GO
