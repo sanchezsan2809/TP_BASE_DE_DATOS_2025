@@ -781,11 +781,12 @@ GO
 
 CREATE TABLE GRUPO_43.detalle_factura(
 	detalle_factura_fact_id BIGINT NOT NULL,
-	detalle_factura_curso_id BIGINT NOT NULL,
+	detalle_factura_curso_id char(8) NOT NULL,
 	detalle_factura_periodo_anio BIGINT NOT NULL,
 	detalle_factura_periodo_mes BIGINT NOT NULL,
 	detalle_factura_importe DECIMAL(8,2),
 	FOREIGN KEY(detalle_factura_fact_id) REFERENCES GRUPO_43.factura(fact_nro),
+	FOREIGN KEY(detalle_factura_curso_id) REFERENCES GRUPO_43.curso(curso_codigo),
 	CONSTRAINT PK_detalle_factura PRIMARY KEY (detalle_factura_fact_id,detalle_factura_curso_id,detalle_factura_periodo_anio,detalle_factura_periodo_mes)
 	);
 GO
