@@ -109,6 +109,8 @@ CREATE TABLE GRUPO_43.profesor(
 
 GO
 
+
+
 CREATE OR ALTER PROCEDURE GRUPO_43.profesores
 AS
 BEGIN
@@ -423,7 +425,59 @@ BEGIN
 END
 GO
 
+CREATE TABLE GRUPO_43.inscripcion_curso(
+	inscrip_curso_numero BIGINT CONSTRAINT PK_inscripcion_curso PRIMARY KEY,
+	inscrip_curso_alumno_legajo BIGINT,
+	inscrip_curso_codigo char(8),
+	inscrip_curso_fecha datetime2(6),
+	inscrip_curso_fecha_respuesta datetime2(6),
+	inscrip_curso_estado NVARCHAR(255), 
+	FOREIGN KEY(inscrip_curso_alumno_legajo) REFERENCES GRUPO_43.alumno,
+	FOREIGN KEY(inscrip_curso_codigo) REFERENCES GRUPO_43.curso
+);
+GO
 
+
+CREATE OR ALTER PROCEDURE GRUPO_43.inscripciones_curso
+AS
+BEGIN
+	SET NOCOUNT ON;
+	TRUNCATE TABLE GRUPO_43.inscripcion_curso;
+
+	INSERT INTO GRUPO_43.inscripcion_curso(
+		inscrip_curso_numero,
+		inscrip_curso_alumno_legajo,
+		inscrip_curso_codigo, 
+		inscrip_curso_fecha,
+		inscrip_curso_fecha_respuesta,
+		inscrip_curso_estado
+	)
+	SELECT
+		Inscripcion_Numero, 
+		Alumno_Legajo,
+		Curso_Codigo,
+		Inscripcion_Fecha, 
+		Inscripcion_FechaRespuesta,
+		Inscripcion_Estado
+	FROM (
+		SELECT DISTINCT
+			Inscripcion_Numero,
+			Alumno_Legajo,
+			Curso_Codigo, 
+			Inscripcion_Fecha, 
+			Inscripcion_FechaRespuesta, 
+			Inscripcion_Estado
+		FROM gd_esquema.Maestra
+		WHERE 
+			Inscripcion_Numero IS NOT NULL
+			AND Alumno_Legajo IS NOT NULL
+			AND Curso_Codigo IS NOT NULL
+			AND Inscripcion_Fecha IS NOT NULL
+	)gd
+
+
+END
+GO
 ---- GESTION DE EVALUACIONES:
 
 CREATE TABLE GRUPO_43.detalle_modulo(
@@ -798,6 +852,12 @@ GO
 
 EXEC GRUPO_43.cursos;
 GO
+
+EXEC GRUPO_43.inscripciones_curso;
+GO
+
+SELECT * 
+FROM GRUPO_43.inscripcion_curso
 
 EXEC GRUPO_43.detalle_modulos;
 GO
