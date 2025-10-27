@@ -49,6 +49,15 @@ DROP TABLE GRUPO_43.detalle_factura;
 IF OBJECT_ID('GRUPO_43.pago', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.pago;
 
+IF OBJECT_ID('GRUPO_43.encuesta', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.encuesta;
+
+IF OBJECT_ID('GRUPO_43.pregunta', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.pregunta;
+
+IF OBJECT_ID('GRUPO_43.detalle_encuesta', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.detalle_encuesta;
+
 CREATE TABLE GRUPO_43.localidad(
 	localidad_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
 	localidad_descripcion NVARCHAR(255) NOT NULL,
@@ -922,20 +931,22 @@ END;
 GO
 
 CREATE TABLE GRUPO_43.detalle_encuesta(
-    detalle_pregunta_id CHAR(8),
+    detalle_encuesta_id CHAR(8) NOT NULL,
+    detalle_pregunta_id CHAR(8) NOT NULL,
     detalle_encuesta_curso_id CHAR(8) NOT NULL,
     detalle_encuesta_fecha_registro DATETIME2(6) NOT NULL,
     detalle_encuesta_nota BIGINT NOT NULL,
     CONSTRAINT FK_detalle_encuesta 
-        FOREIGN KEY(detalle_encuesta_curso_id,detalle_encuesta_fecha_registro) 
-        REFERENCES GRUPO_43.encuesta(encuesta_curso_id,encuesta_fecha_registro),
+        FOREIGN KEY(detalle_encuesta_curso_id, detalle_encuesta_fecha_registro) 
+        REFERENCES GRUPO_43.encuesta(encuesta_curso_id, encuesta_fecha_registro),
     CONSTRAINT FK_detalle_encuesta_pregunta
         FOREIGN KEY (detalle_pregunta_id)
         REFERENCES GRUPO_43.pregunta(pregunta_id),
-    CONSTRAINT PK_detalle_encuesta
-        PRIMARY KEY (detalle_pregunta_id,detalle_encuesta_curso_id,detalle_encuesta_fecha_registro)
+    CONSTRAINT PK_detalle_encuesta 
+        PRIMARY KEY (detalle_encuesta_id,detalle_encuesta_curso_id, detalle_encuesta_fecha_registro, detalle_pregunta_id)
 );
 GO
+
 
 CREATE OR ALTER PROCEDURE GRUPO_43.detalle_encuestas
 AS
@@ -943,47 +954,48 @@ BEGIN
     TRUNCATE TABLE GRUPO_43.detalle_encuesta;
 
     INSERT INTO GRUPO_43.detalle_encuesta(
+        detalle_encuesta_id,
         detalle_pregunta_id,
         detalle_encuesta_curso_id,
         detalle_encuesta_fecha_registro,
         detalle_encuesta_nota
     )
-    SELECT DISTINCT
+    SELECT 
+        RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY v.Curso_Codigo, v.Encuesta_FechaRegistro, v.pregunta) AS VARCHAR(8)), 8) AS detalle_encuesta_id,
         q.pregunta_id,
-        m.Curso_Codigo,
-        m.Encuesta_FechaRegistro,
-        m.Encuesta_Nota
+        v.Curso_Codigo,
+        v.Encuesta_FechaRegistro,
+        v.Encuesta_Nota
     FROM (
-        SELECT DISTINCT 
-            Curso_Codigo, Encuesta_FechaRegistro, 
-            Encuesta_Pregunta1 AS pregunta, 
-            Encuesta_Nota1 AS Encuesta_Nota
+        SELECT 
+            Curso_Codigo, Encuesta_FechaRegistro, Encuesta_Pregunta1 AS pregunta, Encuesta_Nota1 AS Encuesta_Nota
         FROM gd_esquema.Maestra
         WHERE Encuesta_Pregunta1 IS NOT NULL
+
         UNION ALL
-        SELECT DISTINCT 
-            Curso_Codigo, Encuesta_FechaRegistro, 
-            Encuesta_Pregunta2 AS pregunta, 
-            Encuesta_Nota2 AS Encuesta_Nota
+
+        SELECT 
+            Curso_Codigo, Encuesta_FechaRegistro, Encuesta_Pregunta2 AS pregunta, Encuesta_Nota2 AS Encuesta_Nota
         FROM gd_esquema.Maestra
         WHERE Encuesta_Pregunta2 IS NOT NULL
+
         UNION ALL
-        SELECT DISTINCT 
-            Curso_Codigo, Encuesta_FechaRegistro, 
-            Encuesta_Pregunta3 AS pregunta, 
-            Encuesta_Nota3 AS Encuesta_Nota
+
+        SELECT 
+            Curso_Codigo, Encuesta_FechaRegistro, Encuesta_Pregunta3 AS pregunta, Encuesta_Nota3 AS Encuesta_Nota
         FROM gd_esquema.Maestra
         WHERE Encuesta_Pregunta3 IS NOT NULL
+
         UNION ALL
-        SELECT DISTINCT 
-            Curso_Codigo, Encuesta_FechaRegistro, 
-            Encuesta_Pregunta4 AS pregunta, 
-            Encuesta_Nota4 AS Encuesta_Nota
+
+        SELECT 
+            Curso_Codigo, Encuesta_FechaRegistro, Encuesta_Pregunta4 AS pregunta, Encuesta_Nota4 AS Encuesta_Nota
         FROM gd_esquema.Maestra
         WHERE Encuesta_Pregunta4 IS NOT NULL
-    ) m
-    INNER JOIN GRUPO_43.pregunta q ON q.pregunta_contenido = m.pregunta
-    INNER JOIN GRUPO_43.curso c ON c.curso_codigo = m.Curso_Codigo;
+    ) AS v
+    INNER JOIN GRUPO_43.pregunta q 
+        ON q.pregunta_contenido = v.pregunta
+    WHERE v.pregunta IS NOT NULL;
 END;
 GO
 
