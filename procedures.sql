@@ -4,62 +4,35 @@ GO
 CREATE SCHEMA GRUPO_43 AUTHORIZATION dbo;
 GO
 
-IF OBJECT_ID('GRUPO_43.profesor', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.profesor;
+IF OBJECT_ID('GRUPO_43.detalle_encuesta', 'U') IS NOT NULL DROP TABLE GRUPO_43.detalle_encuesta;
+IF OBJECT_ID('GRUPO_43.encuesta', 'U') IS NOT NULL DROP TABLE GRUPO_43.encuesta;
+IF OBJECT_ID('GRUPO_43.pregunta', 'U') IS NOT NULL DROP TABLE GRUPO_43.pregunta;
 
-IF OBJECT_ID('GRUPO_43.alumno', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.alumno;
 
-IF OBJECT_ID('GRUPO_43.sede', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.sede;
+IF OBJECT_ID('GRUPO_43.pago', 'U') IS NOT NULL DROP TABLE GRUPO_43.pago;
+IF OBJECT_ID('GRUPO_43.detalle_factura', 'U') IS NOT NULL DROP TABLE GRUPO_43.detalle_factura;
+IF OBJECT_ID('GRUPO_43.factura', 'U') IS NOT NULL DROP TABLE GRUPO_43.factura;
 
-IF OBJECT_ID('GRUPO_43.localidad', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.localidad;
+IF OBJECT_ID('GRUPO_43.evaluacion_final', 'U') IS NOT NULL DROP TABLE GRUPO_43.evaluacion_final;
+IF OBJECT_ID('GRUPO_43.inscripcion_final', 'U') IS NOT NULL DROP TABLE GRUPO_43.inscripcion_final;
+IF OBJECT_ID('GRUPO_43.instancia_final', 'U') IS NOT NULL DROP TABLE GRUPO_43.instancia_final;
 
-IF OBJECT_ID('GRUPO_43.modulo', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.modulo;
+IF OBJECT_ID('GRUPO_43.tp', 'U') IS NOT NULL DROP TABLE GRUPO_43.tp;
+IF OBJECT_ID('GRUPO_43.evaluacion', 'U') IS NOT NULL DROP TABLE GRUPO_43.evaluacion;
+IF OBJECT_ID('GRUPO_43.modulo', 'U') IS NOT NULL DROP TABLE GRUPO_43.modulo;
+IF OBJECT_ID('GRUPO_43.detalle_modulo', 'U') IS NOT NULL DROP TABLE GRUPO_43.detalle_modulo;
 
-IF OBJECT_ID('GRUPO_43.detalle_curso', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.detalle_curso;
+IF OBJECT_ID('GRUPO_43.inscripcion_curso','U') IS NOT NULL DROP TABLE GRUPO_43.inscripcion_curso;
+IF OBJECT_ID('GRUPO_43.curso', 'U') IS NOT NULL DROP TABLE GRUPO_43.curso;
+IF OBJECT_ID('GRUPO_43.detalle_curso', 'U') IS NOT NULL DROP TABLE GRUPO_43.detalle_curso;
+IF OBJECT_ID('GRUPO_43.categoria', 'U') IS NOT NULL DROP TABLE GRUPO_43.categoria;
 
-IF OBJECT_ID('GRUPO_43.categoria', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.categoria;
+IF OBJECT_ID('GRUPO_43.sede', 'U') IS NOT NULL DROP TABLE GRUPO_43.sede;
+IF OBJECT_ID('GRUPO_43.profesor', 'U') IS NOT NULL DROP TABLE GRUPO_43.profesor;
+IF OBJECT_ID('GRUPO_43.alumno', 'U') IS NOT NULL DROP TABLE GRUPO_43.alumno;
 
-IF OBJECT_ID('GRUPO_43.curso', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.curso;
-
-IF OBJECT_ID('GRUPO_43.evaluacion', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.evaluacion;
-
-IF OBJECT_ID('GRUPO_43.tp', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.tp;
-
-IF OBJECT_ID('GRUPO_43.instancia_final', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.instancia_final;
-
-IF OBJECT_ID('GRUPO_43.inscripcion_final', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.inscripcion_final;
-
-IF OBJECT_ID('GRUPO_43.evaluacion_final', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.evaluacion_final;
-
-IF OBJECT_ID('GRUPO_43.factura', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.factura;
-
-IF OBJECT_ID('GRUPO_43.detalle_factura', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.detalle_factura;
-
-IF OBJECT_ID('GRUPO_43.pago', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.pago;
-
-IF OBJECT_ID('GRUPO_43.encuesta', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.encuesta;
-
-IF OBJECT_ID('GRUPO_43.pregunta', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.pregunta;
-
-IF OBJECT_ID('GRUPO_43.detalle_encuesta', 'U') IS NOT NULL
-DROP TABLE GRUPO_43.detalle_encuesta;
+IF OBJECT_ID('GRUPO_43.turno', 'U') IS NOT NULL DROP TABLE GRUPO_43.turno;
+IF OBJECT_ID('GRUPO_43.localidad', 'U') IS NOT NULL DROP TABLE GRUPO_43.localidad;
 
 
 ---- GESTIÓN DE INSCRIPCIONES
@@ -70,12 +43,235 @@ CREATE TABLE GRUPO_43.localidad(
 );
 GO
 
+CREATE TABLE GRUPO_43.turno(
+	turno_id char(8),
+	turno_descripcion NVARCHAR(255)
+);
+GO
 
+CREATE TABLE GRUPO_43.categoria(
+	 categoria_id char(8) CONSTRAINT PK_categoria PRIMARY KEY,
+	 categoria_descripcion NVARCHAR(255)
+)
+GO
+
+CREATE TABLE GRUPO_43.detalle_modulo(
+	detalle_modulo_nombre NVARCHAR(255) CONSTRAINT PK_detalle_modulo PRIMARY KEY,
+	detalle_modulo_descripcion NVARCHAR(255)
+);
+GO
+
+CREATE TABLE GRUPO_43.pregunta(
+    pregunta_id CHAR(8) CONSTRAINT PK_pregunta PRIMARY KEY,
+    pregunta_contenido VARCHAR(255) NOT NULL
+);
+GO
+
+CREATE TABLE GRUPO_43.profesor(
+		profesor_id CHAR(8) CONSTRAINT PK_profesor PRIMARY KEY,
+		profesor_nombre NVARCHAR(255) NOT NULL,
+		profesor_apellido NVARCHAR(255) NOT NULL,
+		profesor_dni NVARCHAR(255) NOT NULL CONSTRAINT UQ_profesor_dni UNIQUE,
+		profesor_fecha_nacimiento DATETIME2(6),
+		profesor_localidad char(8) DEFAULT '00000000',
+		profesor_mail NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+		profesor_direccion NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+		profesor_telefono NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR', 
+		FOREIGN KEY(profesor_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
+);
+GO
+
+CREATE TABLE GRUPO_43.alumno(
+	alumno_legajo BIGINT CONSTRAINT PK_alumno PRIMARY KEY,
+	alumno_nombre VARCHAR(255) NOT NULL,
+	alumno_apellido VARCHAR(255) NOT NULL,
+	alumno_dni BIGINT NOT NULL CONSTRAINT UQ_alumno_dni UNIQUE,
+	alumno_fecha_nacimiento DATETIME2(6),
+	alumno_localidad CHAR(8) NOT NULL CONSTRAINT DF_alumno_localidad DEFAULT '00000000',
+    alumno_mail VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+    alumno_domicilio VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+    alumno_telefono VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
+	FOREIGN KEY(alumno_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
+	);
+GO
+
+
+
+CREATE TABLE GRUPO_43.sede(
+	sede_id char(8) CONSTRAINT PK_sede PRIMARY KEY,
+	sede_direccion nvarchar(255),
+	sede_localidad char(8), 
+	sede_nombre nvarchar(255),
+	sede_telefono nvarchar(255) DEFAULT 'SIN ESPECIFICAR',
+	sede_mail nvarchar(255) DEFAULT 'SIN ESPECIFICAR', 
+	FOREIGN KEY(sede_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
+)
+GO
+
+CREATE TABLE GRUPO_43.detalle_curso(
+	detalle_curso_id char(8) CONSTRAINT PK_detalle_curso PRIMARY KEY,
+	detalle_curso_nombre NVARCHAR(255),
+	detalle_curso_descripcion NVARCHAR(255),
+	detalle_curso_categoria char(8), 
+	FOREIGN KEY(detalle_curso_categoria) REFERENCES GRUPO_43.categoria
+)
+GO
+
+CREATE TABLE GRUPO_43.curso(
+	curso_codigo char(8) CONSTRAINT PK_curso PRIMARY KEY,
+	curso_sede_id char(8),
+	curso_profesor_id char(8),
+	curso_turno_id char(8),
+	curso_detalle_curso_id char(8),
+	curso_dia nvarchar(255),
+	curso_fecha_inicio nvarchar(255),
+	curso_fecha_fin nvarchar(255),
+	curso_duracion BIGINT,
+	curso_precio_mensual decimal(38,2)
+);
+GO
+
+CREATE TABLE GRUPO_43.inscripcion_curso(
+	inscrip_curso_numero BIGINT CONSTRAINT PK_inscripcion_curso PRIMARY KEY,
+	inscrip_curso_alumno_legajo BIGINT,
+	inscrip_curso_codigo char(8),
+	inscrip_curso_fecha datetime2(6),
+	inscrip_curso_fecha_respuesta datetime2(6),
+	inscrip_curso_estado NVARCHAR(255), 
+	FOREIGN KEY(inscrip_curso_alumno_legajo) REFERENCES GRUPO_43.alumno,
+	FOREIGN KEY(inscrip_curso_codigo) REFERENCES GRUPO_43.curso
+);
+GO
+
+CREATE TABLE GRUPO_43.modulo(
+	modulo_curso_id char(8), 
+	modulo_detalle_modulo_nombre NVARCHAR(255),
+	FOREIGN KEY(modulo_curso_id) REFERENCES GRUPO_43.curso,
+	FOREIGN KEY(modulo_detalle_modulo_nombre) REFERENCES GRUPO_43.detalle_modulo,
+	CONSTRAINT PK_MODULO PRIMARY KEY (modulo_curso_id, modulo_detalle_modulo_nombre)
+);
+GO
+
+CREATE TABLE GRUPO_43.evaluacion(
+		evaluacion_modulo_nombre NVARCHAR(255),
+		evaluacion_curso_id CHAR(8),
+		evaluacion_alumno_legajo BIGINT,
+		evaluacion_instancia BIGINT NOT NULL,
+		evaluacion_presente BIT NOT NULL,
+		evaluacion_nota BIGINT NULL DEFAULT 1,
+		evaluacion_fecha DATETIME2(6),
+		CONSTRAINT PK_evaluacion PRIMARY KEY (evaluacion_modulo_nombre, evaluacion_curso_id, evaluacion_alumno_legajo),
+		FOREIGN KEY(evaluacion_curso_id,evaluacion_modulo_nombre) REFERENCES GRUPO_43.modulo,
+		FOREIGN KEY(evaluacion_alumno_legajo) REFERENCES GRUPO_43.alumno
+	);
+GO	
+
+CREATE TABLE GRUPO_43.tp(
+		tp_curso_codigo CHAR(8),
+		tp_alumno_legajo BIGINT,
+		tp_nota BIGINT NOT NULL DEFAULT 0,
+		tp_fecha_evaluacion DATETIME2(6),
+		CONSTRAINT PK_tp PRIMARY KEY (tp_curso_codigo, tp_alumno_legajo),
+		FOREIGN KEY(tp_curso_codigo) REFERENCES GRUPO_43.curso,
+		FOREIGN KEY(tp_alumno_legajo) REFERENCES GRUPO_43.alumno
+);
+GO
+
+CREATE TABLE GRUPO_43.instancia_final(
+	instancia_final_id CHAR(8) CONSTRAINT PK_instancia_final PRIMARY KEY,
+	instancia_final_curso char(8),
+	instancia_final_hora NVARCHAR(255) NOT NULL,
+	instancia_final_descripcion NVARCHAR(255) NOT NULL,
+	instancia_final_fecha DATETIME2(6)
+	FOREIGN KEY(instancia_final_curso) REFERENCES GRUPO_43.curso
+);
+GO
+
+CREATE TABLE GRUPO_43.inscripcion_final(
+	inscripcion_final_nro BIGINT CONSTRAINT PK_inscripcion_final PRIMARY KEY,
+	inscripcion_final_fecha VARCHAR(255) NOT NULL,
+	inscripcion_final_instancia CHAR(8),
+	inscripcion_final_alumno_legajo BIGINT,
+	FOREIGN KEY(inscripcion_final_instancia) REFERENCES GRUPO_43.instancia_final(instancia_final_id),
+	FOREIGN KEY(inscripcion_final_alumno_legajo) REFERENCES GRUPO_43.alumno
+);
+GO
+
+CREATE TABLE GRUPO_43.evaluacion_final(
+	final_id char(8) CONSTRAINT PK_evaluacion_final PRIMARY KEY,
+	final_alumno_legajo BIGINT,
+	final_instancia_final char(8),
+	final_nota BIGINT,
+	final_profesor char(8),
+	final_presente bit,
+	FOREIGN KEY(final_alumno_legajo) REFERENCES GRUPO_43.alumno,
+	FOREIGN KEY(final_instancia_final) REFERENCES GRUPO_43.instancia_final,
+	FOREIGN KEY(final_profesor) REFERENCES GRUPO_43.profesor
+);
+GO
+
+CREATE TABLE GRUPO_43.factura(
+	fact_nro BIGINT CONSTRAINT PK_factura PRIMARY KEY,
+	fact_fecha_emision DATETIME2(6),
+	fact_fecha_venc DATETIME2(6),
+	fact_importe_total DECIMAL(18,2),
+	fact_alumno_legajo BIGINT NULL,
+	FOREIGN KEY(fact_alumno_legajo) REFERENCES GRUPO_43.alumno(alumno_legajo)
+	);
+GO
+
+CREATE TABLE GRUPO_43.detalle_factura(
+	detalle_factura_fact_id BIGINT NOT NULL,
+	detalle_factura_curso_id char(8) NOT NULL,
+	detalle_factura_periodo_anio BIGINT NOT NULL,
+	detalle_factura_periodo_mes BIGINT NOT NULL,
+	detalle_factura_importe DECIMAL(8,2),
+	FOREIGN KEY(detalle_factura_fact_id) REFERENCES GRUPO_43.factura(fact_nro),
+	FOREIGN KEY(detalle_factura_curso_id) REFERENCES GRUPO_43.curso(curso_codigo),
+	CONSTRAINT PK_detalle_factura PRIMARY KEY (detalle_factura_fact_id,detalle_factura_curso_id,detalle_factura_periodo_anio,detalle_factura_periodo_mes)
+	);
+GO
+
+CREATE TABLE GRUPO_43.pago(
+	pago_id CHAR(8) CONSTRAINT PK_pago PRIMARY KEY,
+	pago_fact_id BIGINT NOT NULL,
+	pago_fecha DATETIME2(6) NOT NULL,
+	pago_importe DECIMAL(18,2) NOT NULL,
+	pago_medio_de_pago VARCHAR(255),
+	FOREIGN KEY(pago_fact_id) REFERENCES GRUPO_43.factura(fact_nro)
+	);
+GO
+
+CREATE TABLE GRUPO_43.encuesta(
+    encuesta_curso_id CHAR(8) NOT NULL,
+    encuesta_observaciones VARCHAR(255) NOT NULL,
+    encuesta_fecha_registro DATETIME2(6) NOT NULL,
+    FOREIGN KEY(encuesta_curso_id) REFERENCES GRUPO_43.curso(curso_codigo),
+    CONSTRAINT PK_encuesta PRIMARY KEY (encuesta_curso_id,encuesta_fecha_registro)
+);
+GO 
+
+CREATE TABLE GRUPO_43.detalle_encuesta(
+    detalle_encuesta_id CHAR(8) NOT NULL,
+    detalle_pregunta_id CHAR(8) NOT NULL,
+    detalle_encuesta_curso_id CHAR(8) NOT NULL,
+    detalle_encuesta_fecha_registro DATETIME2(6) NOT NULL,
+    detalle_encuesta_nota BIGINT NOT NULL,
+    CONSTRAINT FK_detalle_encuesta 
+        FOREIGN KEY(detalle_encuesta_curso_id, detalle_encuesta_fecha_registro) 
+        REFERENCES GRUPO_43.encuesta(encuesta_curso_id, encuesta_fecha_registro),
+    CONSTRAINT FK_detalle_encuesta_pregunta
+        FOREIGN KEY (detalle_pregunta_id)
+        REFERENCES GRUPO_43.pregunta(pregunta_id),
+    CONSTRAINT PK_detalle_encuesta 
+        PRIMARY KEY (detalle_encuesta_id,detalle_encuesta_curso_id, detalle_encuesta_fecha_registro, detalle_pregunta_id)
+);
+GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.localidades
 AS 
 BEGIN
-	TRUNCATE TABLE GRUPO_43.localidad;
+	DELETE FROM GRUPO_43.localidad;
 
 	INSERT INTO GRUPO_43.localidad (localidad_id, localidad_descripcion, localidad_provincia)
 	SELECT
@@ -108,28 +304,11 @@ BEGIN
 END
 GO
 
-CREATE TABLE GRUPO_43.profesor(
-		profesor_id CHAR(8) CONSTRAINT PK_profesor PRIMARY KEY,
-		profesor_nombre NVARCHAR(255) NOT NULL,
-		profesor_apellido NVARCHAR(255) NOT NULL,
-		profesor_dni NVARCHAR(255) NOT NULL CONSTRAINT UQ_profesor_dni UNIQUE,
-		profesor_fecha_nacimiento DATETIME2(6),
-		profesor_localidad char(8) DEFAULT '00000000',
-		profesor_mail NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
-		profesor_direccion NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
-		profesor_telefono NVARCHAR(255) DEFAULT 'SIN ESPECIFICAR', 
-		FOREIGN KEY(profesor_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
-);
-
-GO
-
-
-
 CREATE OR ALTER PROCEDURE GRUPO_43.profesores
 AS
 BEGIN
 	
-	TRUNCATE TABLE GRUPO_43.profesor;
+	DELETE FROM GRUPO_43.profesor;
 
 	INSERT INTO GRUPO_43.profesor(
 		profesor_id,
@@ -173,25 +352,11 @@ BEGIN
 END;
 GO
 
-CREATE TABLE GRUPO_43.alumno(
-	alumno_legajo BIGINT CONSTRAINT PK_alumno PRIMARY KEY,
-	alumno_nombre VARCHAR(255) NOT NULL,
-	alumno_apellido VARCHAR(255) NOT NULL,
-	alumno_dni BIGINT NOT NULL CONSTRAINT UQ_alumno_dni UNIQUE,
-	alumno_fecha_nacimiento DATETIME2(6),
-	alumno_localidad CHAR(8) NOT NULL CONSTRAINT DF_alumno_localidad DEFAULT '00000000',
-    alumno_mail VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
-    alumno_domicilio VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
-    alumno_telefono VARCHAR(255) DEFAULT 'SIN ESPECIFICAR',
-	FOREIGN KEY(alumno_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
-	);
-GO
-
 
 CREATE OR ALTER PROCEDURE GRUPO_43.alumnos
 AS
 BEGIN
-	TRUNCATE TABLE GRUPO_43.alumno;
+	DELETE FROM GRUPO_43.alumno;
 
 	INSERT INTO GRUPO_43.alumno(
 		alumno_legajo,
@@ -238,17 +403,12 @@ BEGIN
 END;
 GO
 
-CREATE TABLE GRUPO_43.turno(
-	turno_id char(8),
-	turno_descripcion NVARCHAR(255)
-);
-GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.turnos
 AS
 BEGIN
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.turno;
+	DELETE FROM GRUPO_43.turno;
 
 	INSERT INTO GRUPO_43.turno
 	SELECT
@@ -262,23 +422,12 @@ BEGIN
 END
 GO
 
-CREATE TABLE GRUPO_43.sede(
-	sede_id char(8) CONSTRAINT PK_sede PRIMARY KEY,
-	sede_direccion nvarchar(255),
-	sede_localidad char(8), 
-	sede_nombre nvarchar(255),
-	sede_telefono nvarchar(255) DEFAULT 'SIN ESPECIFICAR',
-	sede_mail nvarchar(255) DEFAULT 'SIN ESPECIFICAR', 
-	FOREIGN KEY(sede_localidad) REFERENCES GRUPO_43.localidad(localidad_id)
-)
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.sedes
 AS
 BEGIN
 	SET NOCOUNT ON;
 	
-	TRUNCATE TABLE GRUPO_43.sede;
+	DELETE FROM GRUPO_43.sede;
 
 	IF NOT EXISTS(SELECT 1 FROM GRUPO_43.localidad WHERE localidad_id = '00000000')
 	BEGIN
@@ -321,18 +470,13 @@ BEGIN
 END
 GO
 
-CREATE TABLE GRUPO_43.categoria(
-	 categoria_id char(8) CONSTRAINT PK_categoria PRIMARY KEY,
-	 categoria_descripcion NVARCHAR(255)
-)
-GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.categorias
 AS
 BEGIN
 	
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.categoria;
+	DELETE FROM GRUPO_43.categoria;
 
 	INSERT INTO GRUPO_43.categoria(
 		categoria_id,
@@ -348,20 +492,11 @@ BEGIN
 END
 GO
 
-CREATE TABLE GRUPO_43.detalle_curso(
-	detalle_curso_id char(8) CONSTRAINT PK_detalle_curso PRIMARY KEY,
-	detalle_curso_nombre NVARCHAR(255),
-	detalle_curso_descripcion NVARCHAR(255),
-	detalle_curso_categoria char(8), 
-	FOREIGN KEY(detalle_curso_categoria) REFERENCES GRUPO_43.categoria
-)
-GO
-
 
 CREATE OR ALTER PROCEDURE GRUPO_43.detalles_curso
 AS
 BEGIN
-	TRUNCATE TABLE GRUPO_43.detalle_curso;
+	DELETE FROM GRUPO_43.detalle_curso;
 	SET NOCOUNT ON;
 
 	INSERT INTO GRUPO_43.detalle_curso(
@@ -385,25 +520,11 @@ BEGIN
 END
 GO
 
-CREATE TABLE GRUPO_43.curso(
-	curso_codigo char(8) CONSTRAINT PK_curso PRIMARY KEY,
-	curso_sede_id char(8),
-	curso_profesor_id char(8),
-	curso_turno_id char(8),
-	curso_detalle_curso_id char(8),
-	curso_dia nvarchar(255),
-	curso_fecha_inicio nvarchar(255),
-	curso_fecha_fin nvarchar(255),
-	curso_duracion BIGINT,
-	curso_precio_mensual decimal(38,2)
-);
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.cursos
 AS
 BEGIN
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.curso;
+	DELETE FROM GRUPO_43.curso;
 
 	INSERT INTO GRUPO_43.curso(
 		curso_codigo,
@@ -451,24 +572,11 @@ BEGIN
 END
 GO
 
-CREATE TABLE GRUPO_43.inscripcion_curso(
-	inscrip_curso_numero BIGINT CONSTRAINT PK_inscripcion_curso PRIMARY KEY,
-	inscrip_curso_alumno_legajo BIGINT,
-	inscrip_curso_codigo char(8),
-	inscrip_curso_fecha datetime2(6),
-	inscrip_curso_fecha_respuesta datetime2(6),
-	inscrip_curso_estado NVARCHAR(255), 
-	FOREIGN KEY(inscrip_curso_alumno_legajo) REFERENCES GRUPO_43.alumno,
-	FOREIGN KEY(inscrip_curso_codigo) REFERENCES GRUPO_43.curso
-);
-GO
-
-
 CREATE OR ALTER PROCEDURE GRUPO_43.inscripciones_curso
 AS
 BEGIN
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.inscripcion_curso;
+	DELETE FROM GRUPO_43.inscripcion_curso;
 
 	INSERT INTO GRUPO_43.inscripcion_curso(
 		inscrip_curso_numero,
@@ -506,17 +614,11 @@ END
 GO
 ---- GESTION DE EVALUACIONES:
 
-CREATE TABLE GRUPO_43.detalle_modulo(
-	detalle_modulo_nombre NVARCHAR(255) CONSTRAINT PK_detalle_modulo PRIMARY KEY,
-	detalle_modulo_descripcion NVARCHAR(255)
-);
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.detalle_modulos
 AS
 BEGIN
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.detalle_modulo;
+	DELETE FROM GRUPO_43.detalle_modulo;
 
 	INSERT INTO GRUPO_43.detalle_modulo(
 		detalle_modulo_nombre,
@@ -535,20 +637,12 @@ BEGIN
 END	
 GO
 
-CREATE TABLE GRUPO_43.modulo(
-	modulo_curso_id char(8), 
-	modulo_detalle_modulo_nombre NVARCHAR(255),
-	FOREIGN KEY(modulo_curso_id) REFERENCES GRUPO_43.curso,
-	FOREIGN KEY(modulo_detalle_modulo_nombre) REFERENCES GRUPO_43.detalle_modulo,
-	CONSTRAINT PK_MODULO PRIMARY KEY (modulo_curso_id, modulo_detalle_modulo_nombre)
-);
-GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.modulos
 AS 
 BEGIN
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.modulo;
+	DELETE FROM GRUPO_43.modulo;
 	
 	INSERT INTO GRUPO_43.modulo (modulo_curso_id, modulo_detalle_modulo_nombre)
 	SELECT
@@ -566,27 +660,12 @@ BEGIN
 END
 GO
 
-
-CREATE TABLE GRUPO_43.evaluacion(
-		evaluacion_modulo_nombre NVARCHAR(255),
-		evaluacion_curso_id CHAR(8),
-		evaluacion_alumno_legajo BIGINT,
-		evaluacion_instancia BIGINT NOT NULL,
-		evaluacion_presente BIT NOT NULL,
-		evaluacion_nota BIGINT NULL DEFAULT 1,
-		evaluacion_fecha DATETIME2(6),
-		CONSTRAINT PK_evaluacion PRIMARY KEY (evaluacion_modulo_nombre, evaluacion_curso_id, evaluacion_alumno_legajo),
-		FOREIGN KEY(evaluacion_curso_id,evaluacion_modulo_nombre) REFERENCES GRUPO_43.modulo,
-		FOREIGN KEY(evaluacion_alumno_legajo) REFERENCES GRUPO_43.alumno
-	);
-GO	
-
 CREATE OR ALTER PROCEDURE GRUPO_43.evaluaciones
 AS
 BEGIN
 
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.evaluacion;
+	DELETE FROM GRUPO_43.evaluacion;
 
 	INSERT INTO GRUPO_43.evaluacion(
 		evaluacion_modulo_nombre,
@@ -628,22 +707,12 @@ BEGIN
 END;
 GO
 
-CREATE TABLE GRUPO_43.tp(
-		tp_curso_codigo CHAR(8),
-		tp_alumno_legajo BIGINT,
-		tp_nota BIGINT NOT NULL DEFAULT 0,
-		tp_fecha_evaluacion DATETIME2(6),
-		CONSTRAINT PK_tp PRIMARY KEY (tp_curso_codigo, tp_alumno_legajo),
-		FOREIGN KEY(tp_curso_codigo) REFERENCES GRUPO_43.curso,
-		FOREIGN KEY(tp_alumno_legajo) REFERENCES GRUPO_43.alumno
-);
-GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.tps
 AS
 BEGIN
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.tp;
+	DELETE FROM GRUPO_43.tp;
 	
 	INSERT INTO GRUPO_43.tp(
 		tp_curso_codigo,
@@ -668,21 +737,11 @@ BEGIN
 END;
 GO
 
-CREATE TABLE GRUPO_43.instancia_final(
-	instancia_final_id CHAR(8) CONSTRAINT PK_instancia_final PRIMARY KEY,
-	instancia_final_curso char(8),
-	instancia_final_hora NVARCHAR(255) NOT NULL,
-	instancia_final_descripcion NVARCHAR(255) NOT NULL,
-	instancia_final_fecha DATETIME2(6)
-	FOREIGN KEY(instancia_final_curso) REFERENCES GRUPO_43.curso
-);
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.instancias_finales
 AS
 BEGIN
 	SET NOCOUNT ON
-	TRUNCATE TABLE GRUPO_43.instancia_final;
+	DELETE FROM GRUPO_43.instancia_final;
 
 
 	INSERT INTO GRUPO_43.instancia_final (
@@ -707,28 +766,18 @@ BEGIN
         FROM gd_esquema.Maestra
         WHERE 
 			Curso_Codigo IS NOT NULL
-			AND Examen_Final_Hora IS NOT NULL
+			AND Examen_final_Fecha IS NOT NULL
 			AND Examen_Final_Fecha IS NOT NULL
 			AND Examen_Final_Descripcion IS NOT NULL
     ) AS instancia;
 END 
 GO
 
-CREATE TABLE GRUPO_43.inscripcion_final(
-	inscripcion_final_nro BIGINT CONSTRAINT PK_inscripcion_final PRIMARY KEY,
-	inscripcion_final_fecha DATETIME2(6) NOT NULL,
-	inscripcion_final_instancia CHAR(8),
-	inscripcion_final_alumno_legajo BIGINT,
-	FOREIGN KEY(inscripcion_final_instancia) REFERENCES GRUPO_43.instancia_final(instancia_final_id),
-	FOREIGN KEY(inscripcion_final_alumno_legajo) REFERENCES GRUPO_43.alumno
-);
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.inscripciones_finales
 AS 
 BEGIN
 	SET NOCOUNT ON
-	TRUNCATE TABLE GRUPO_43.inscripcion_final;
+	DELETE FROM GRUPO_43.inscripcion_final;
 
 	INSERT INTO GRUPO_43.inscripcion_final(
 	inscripcion_final_nro,
@@ -759,24 +808,11 @@ BEGIN
 END 
 GO
 ---- GESTIÓN DE EVALUACIONES FINALES
-CREATE TABLE GRUPO_43.evaluacion_final(
-	final_id char(8) CONSTRAINT PK_evaluacion_final PRIMARY KEY,
-	final_alumno_legajo BIGINT,
-	final_instancia_final char(8),
-	final_nota BIGINT,
-	final_profesor char(8),
-	final_presente bit,
-	FOREIGN KEY(final_alumno_legajo) REFERENCES GRUPO_43.alumno,
-	FOREIGN KEY(final_instancia_final) REFERENCES GRUPO_43.instancia_final,
-	FOREIGN KEY(final_profesor) REFERENCES GRUPO_43.profesor
-);
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.evaluaciones_final
 AS
 BEGIN
 	SET NOCOUNT ON;
-	TRUNCATE TABLE GRUPO_43.evaluacion_final;
+	DELETE FROM GRUPO_43.evaluacion_final;
 
 	INSERT INTO GRUPO_43.evaluacion_final(
 		final_id, 
@@ -815,20 +851,11 @@ GO
 
 ---- GESTION DE PAGOS
 
-CREATE TABLE GRUPO_43.factura(
-	fact_nro BIGINT CONSTRAINT PK_factura PRIMARY KEY,
-	fact_fecha_emision DATETIME2(6),
-	fact_fecha_venc DATETIME2(6),
-	fact_importe_total DECIMAL(18,2),
-	fact_alumno_legajo BIGINT NULL,
-	FOREIGN KEY(fact_alumno_legajo) REFERENCES GRUPO_43.alumno(alumno_legajo)
-	);
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.facturas
 AS
 BEGIN
-	TRUNCATE TABLE GRUPO_43.factura;
+	SET NOCOUNT ON;
+	DELETE FROM GRUPO_43.factura;
 
 	INSERT INTO GRUPO_43.factura(
 		fact_nro,
@@ -850,22 +877,11 @@ BEGIN
 END;
 GO
 
-CREATE TABLE GRUPO_43.detalle_factura(
-	detalle_factura_fact_id BIGINT NOT NULL,
-	detalle_factura_curso_id char(8) NOT NULL,
-	detalle_factura_periodo_anio BIGINT NOT NULL,
-	detalle_factura_periodo_mes BIGINT NOT NULL,
-	detalle_factura_importe DECIMAL(8,2),
-	FOREIGN KEY(detalle_factura_fact_id) REFERENCES GRUPO_43.factura(fact_nro),
-	FOREIGN KEY(detalle_factura_curso_id) REFERENCES GRUPO_43.curso(curso_codigo),
-	CONSTRAINT PK_detalle_factura PRIMARY KEY (detalle_factura_fact_id,detalle_factura_curso_id,detalle_factura_periodo_anio,detalle_factura_periodo_mes)
-	);
-GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.factura_detalles
 AS
 BEGIN
-	TRUNCATE TABLE GRUPO_43.detalle_factura;
+	DELETE FROM GRUPO_43.detalle_factura;
 
 	INSERT INTO GRUPO_43.detalle_factura(
 		detalle_factura_fact_id,
@@ -887,20 +903,10 @@ BEGIN
 END;
 GO
 
-CREATE TABLE GRUPO_43.pago(
-	pago_id CHAR(8) CONSTRAINT PK_pago PRIMARY KEY,
-	pago_fact_id BIGINT NOT NULL,
-	pago_fecha DATETIME2(6) NOT NULL,
-	pago_importe DECIMAL(18,2) NOT NULL,
-	pago_medio_de_pago VARCHAR(255),
-	FOREIGN KEY(pago_fact_id) REFERENCES GRUPO_43.factura(fact_nro)
-	);
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.pagos
 AS
 BEGIN
-	TRUNCATE TABLE GRUPO_43.pago;
+	DELETE FROM GRUPO_43.pago;
 
 	INSERT INTO GRUPO_43.pago(
 		pago_id,
@@ -923,19 +929,10 @@ GO
 
 -- GESTION DE ENCUESTAS
 
-CREATE TABLE GRUPO_43.encuesta(
-    encuesta_curso_id CHAR(8) NOT NULL,
-    encuesta_observaciones VARCHAR(255) NOT NULL,
-    encuesta_fecha_registro DATETIME2(6) NOT NULL,
-    FOREIGN KEY(encuesta_curso_id) REFERENCES GRUPO_43.curso(curso_codigo),
-    CONSTRAINT PK_encuesta PRIMARY KEY (encuesta_curso_id,encuesta_fecha_registro)
-);
-GO 
-
 CREATE OR ALTER PROCEDURE GRUPO_43.encuestas
 AS
 BEGIN
-    TRUNCATE TABLE GRUPO_43.encuesta;
+    DELETE FROM GRUPO_43.encuesta;
 
     INSERT INTO GRUPO_43.encuesta(
         encuesta_curso_id,
@@ -953,16 +950,10 @@ BEGIN
 END;
 GO
 
-CREATE TABLE GRUPO_43.pregunta(
-    pregunta_id CHAR(8) CONSTRAINT PK_pregunta PRIMARY KEY,
-    pregunta_contenido VARCHAR(255) NOT NULL
-);
-GO
-
 CREATE OR ALTER PROCEDURE GRUPO_43.preguntas
 AS
 BEGIN
-    TRUNCATE TABLE GRUPO_43.pregunta;
+    DELETE FROM GRUPO_43.pregunta;
 
     INSERT INTO GRUPO_43.pregunta(
         pregunta_id,
@@ -1001,28 +992,10 @@ BEGIN
 END;
 GO
 
-CREATE TABLE GRUPO_43.detalle_encuesta(
-    detalle_encuesta_id CHAR(8) NOT NULL,
-    detalle_pregunta_id CHAR(8) NOT NULL,
-    detalle_encuesta_curso_id CHAR(8) NOT NULL,
-    detalle_encuesta_fecha_registro DATETIME2(6) NOT NULL,
-    detalle_encuesta_nota BIGINT NOT NULL,
-    CONSTRAINT FK_detalle_encuesta 
-        FOREIGN KEY(detalle_encuesta_curso_id, detalle_encuesta_fecha_registro) 
-        REFERENCES GRUPO_43.encuesta(encuesta_curso_id, encuesta_fecha_registro),
-    CONSTRAINT FK_detalle_encuesta_pregunta
-        FOREIGN KEY (detalle_pregunta_id)
-        REFERENCES GRUPO_43.pregunta(pregunta_id),
-    CONSTRAINT PK_detalle_encuesta 
-        PRIMARY KEY (detalle_encuesta_id,detalle_encuesta_curso_id, detalle_encuesta_fecha_registro, detalle_pregunta_id)
-);
-GO
-
-
 CREATE OR ALTER PROCEDURE GRUPO_43.detalle_encuestas
 AS
 BEGIN
-    TRUNCATE TABLE GRUPO_43.detalle_encuesta;
+    DELETE FROM GRUPO_43.detalle_encuesta;
 
     INSERT INTO GRUPO_43.detalle_encuesta(
         detalle_encuesta_id,
@@ -1070,68 +1043,36 @@ BEGIN
 END;
 GO
 
-EXEC GRUPO_43.turnos;
-GO
-
-EXEC GRUPO_43.categorias;
-GO
-
-EXEC GRUPO_43.detalles_curso;
-GO
-
-EXEC GRUPO_43.cursos;
-GO
-
-EXEC GRUPO_43.inscripciones_curso;
-GO
-
-EXEC GRUPO_43.detalle_modulos;
-GO
-
-EXEC GRUPO_43.modulos;
-GO
+USE GD2C2025;
 
 EXEC GRUPO_43.localidades;
-GO
-
-EXEC GRUPO_43.sedes;
-GO
-
-EXEC GRUPO_43.alumnos;
-GO
-
-EXEC GRUPO_43.evaluaciones;
-GO
-
-EXEC GRUPO_43.tps;
-GO
+EXEC GRUPO_43.turnos;
+EXEC GRUPO_43.categorias;
 
 EXEC GRUPO_43.profesores;
-GO
+EXEC GRUPO_43.alumnos;
+EXEC GRUPO_43.sedes;
+
+EXEC GRUPO_43.detalles_curso;
+EXEC GRUPO_43.cursos;
+
+EXEC GRUPO_43.inscripciones_curso;
+
+EXEC GRUPO_43.detalle_modulos;
+EXEC GRUPO_43.modulos;
+
+EXEC GRUPO_43.evaluaciones;
+EXEC GRUPO_43.tps;
 
 EXEC GRUPO_43.instancias_finales;
-GO
-
 EXEC GRUPO_43.inscripciones_finales;
-GO
-
 EXEC GRUPO_43.evaluaciones_final;
-GO
 
 EXEC GRUPO_43.facturas;
-GO
-
 EXEC GRUPO_43.factura_detalles;
-GO
-
 EXEC GRUPO_43.pagos;
-GO
 
 EXEC GRUPO_43.encuestas;
-GO
-
 EXEC GRUPO_43.preguntas;
-GO
-
 EXEC GRUPO_43.detalle_encuestas;
 GO
