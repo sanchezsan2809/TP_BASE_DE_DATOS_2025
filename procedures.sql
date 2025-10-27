@@ -531,9 +531,9 @@ BEGIN
 			Curso_Codigo,
 			Alumno_Legajo,
 			Evaluacion_Curso_Instancia, 
-			Evaluacion_Curso_Presente, -- cambiar a: ma.Evaluacion_Curso_Presente
-			Evaluacion_Curso_Nota, -- cambiar a: ma.Evaluacion_Curso_Nota
-			Evaluacion_Curso_fechaEvaluacion -- cambiar a: ma.Evaluacion_Curso_fechaEvaluacion
+			Evaluacion_Curso_Presente, 
+			Evaluacion_Curso_Nota, 
+			Evaluacion_Curso_fechaEvaluacion 
 	FROM gd_esquema.Maestra
 	WHERE
 		Modulo_Nombre IS NOT NULL AND
@@ -544,56 +544,47 @@ BEGIN
 		Evaluacion_Curso_Nota IS NOT NULL AND
 		Evaluacion_Curso_fechaEvaluacion IS NOT NULL
 	)gd
- --   JOIN GRUPO_43.modulo m
- --       ON m.modulo_nombre = ma.Modulo_Nombre
- --       AND m.modulo_descripcion = ma.Modulo_Descripcion
-	--JOIN GRUPO_43.curso c 
-	--	ON c.curso_nombre = ma.Curso_Nombre
-	--	AND c.curso_descripcion = ma.Curso_Descripcion
-	--	AND c.curso_codigo = ma.Curso_Codigo
-	--JOIN GRUPO_43.alumno a
-	--	ON a.curso_nombre = ma.alumno
-	--	AND a.alumno_dni = ma.Alumno_Dni
-	--	AND a.alumno = ma.Alumno_Legajo
--- cambiar por: ma.Evaluacion_Curso_Instancia
 
 END;
 GO
 
 CREATE TABLE GRUPO_43.tp(
-		-- tp_curso_id CHAR(8),
-		-- tp_alumno_id CHAR(8),
+		tp_curso_codigo CHAR(8),
+		tp_alumno_legajo BIGINT,
 		tp_nota BIGINT NOT NULL DEFAULT 0,
 		tp_fecha_evaluacion DATETIME2(6),
-		-- CONSTRAINT PK_tp PRIMARY KEY (tp_curso_id, tp_alumno_id),
-		-- FOREIGN KEY(tp_curso_id) REFERENCES GRUPO_43.curso(curso_id),
-		-- FOREIGN KEY(tp_alumno_id) REFERENCES GRUPO_43.alumno(alumno_id)
-	);
+		CONSTRAINT PK_tp PRIMARY KEY (tp_curso_codigo, tp_alumno_legajo),
+		FOREIGN KEY(tp_curso_codigo) REFERENCES GRUPO_43.curso,
+		FOREIGN KEY(tp_alumno_legajo) REFERENCES GRUPO_43.alumno
+);
 GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.tps
 AS
 BEGIN
-	TRUNCATE TABLE GRUPO_43.tp
+	SET NOCOUNT ON;
+	TRUNCATE TABLE GRUPO_43.tp;
 	
-INSERT INTO GRUPO_43.tp(
-	-- tp_curso_id,
-	-- tp_alumno_id,
-	tp_nota,
-	tp_fecha_evaluacion
-)
-SELECT
-	Trabajo_Practico_Nota,
-	Trabajo_Practico_FechaEvaluacion
-FROM(
-	SELECT DISTINCT
+	INSERT INTO GRUPO_43.tp(
+		tp_curso_codigo,
+		tp_alumno_legajo,
+		tp_nota,
+		tp_fecha_evaluacion
+	)
+	SELECT
+		Curso_Codigo,
+		Alumno_Legajo,
 		Trabajo_Practico_Nota,
 		Trabajo_Practico_FechaEvaluacion
-	FROM gd_esquema.Maestra
-	WHERE Trabajo_Practico_Nota IS NOT NULL and Trabajo_Practico_FechaEvaluacion IS NOT NULL 
-	)tp
-	-- Cuando esten todas las tablas se podrá vincular sus FK, logica similar a la de la tabla "evaluacion"
-
+	FROM(
+		SELECT DISTINCT
+			Trabajo_Practico_Nota,
+			Trabajo_Practico_FechaEvaluacion,
+			Alumno_Legajo, 
+			Curso_Codigo
+		FROM gd_esquema.Maestra
+		WHERE Trabajo_Practico_Nota IS NOT NULL and Trabajo_Practico_FechaEvaluacion IS NOT NULL 
+		)gd
 END;
 GO
 
