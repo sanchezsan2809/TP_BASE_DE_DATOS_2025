@@ -40,6 +40,9 @@ DROP TABLE GRUPO_43.instancia_final;
 IF OBJECT_ID('GRUPO_43.inscripcion_final', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.inscripcion_final;
 
+IF OBJECT_ID('GRUPO_43.evaluacion_final', 'U') IS NOT NULL
+DROP TABLE GRUPO_43.evaluacion_final;
+
 IF OBJECT_ID('GRUPO_43.factura', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.factura;
 
@@ -58,6 +61,8 @@ DROP TABLE GRUPO_43.pregunta;
 IF OBJECT_ID('GRUPO_43.detalle_encuesta', 'U') IS NOT NULL
 DROP TABLE GRUPO_43.detalle_encuesta;
 
+
+---- GESTIÓN DE INSCRIPCIONES
 CREATE TABLE GRUPO_43.localidad(
 	localidad_id char(8) CONSTRAINT PK_localidad PRIMARY KEY,
 	localidad_descripcion NVARCHAR(255) NOT NULL,
@@ -65,12 +70,12 @@ CREATE TABLE GRUPO_43.localidad(
 );
 GO
 
-/* Gesti�n de inscripciones*/
+
 
 CREATE OR ALTER PROCEDURE GRUPO_43.localidades
 AS 
 BEGIN
-	TRUNCATE TABLE GRUPO_43.profesor;
+	TRUNCATE TABLE GRUPO_43.localidad;
 
 	INSERT INTO GRUPO_43.localidad (localidad_id, localidad_descripcion, localidad_provincia)
 	SELECT
@@ -158,7 +163,10 @@ BEGIN
 			Profesor_Direccion,
 			Profesor_Telefono
 		FROM gd_esquema.Maestra
-		WHERE Profesor_Dni IS NOT NULL
+		WHERE 
+		Profesor_nombre IS NOT NULL
+		AND Profesor_Apellido IS NOT NULL
+		AND Profesor_Dni IS NOT NULL
 	)p
 	LEFT JOIN GRUPO_43.localidad l ON l.localidad_descripcion = p.Profesor_Localidad 
 
@@ -219,7 +227,11 @@ BEGIN
 			Alumno_Direccion,
 			Alumno_Telefono
 		FROM gd_esquema.Maestra
-		WHERE Alumno_Dni IS NOT NULL
+		WHERE 
+		Alumno_Legajo IS NOT NULL
+		AND Alumno_Nombre IS NOT NULL
+		AND Alumno_Apellido IS NOT NULL
+		AND Alumno_Dni IS NOT NULL
 	)p
 	LEFT JOIN GRUPO_43.localidad l ON l.localidad_descripcion = p.Alumno_Localidad AND l.localidad_provincia = p.Alumno_Provincia;
 
@@ -252,8 +264,8 @@ GO
 
 CREATE TABLE GRUPO_43.sede(
 	sede_id char(8) CONSTRAINT PK_sede PRIMARY KEY,
-	sede_direccion nvarchar(255) DEFAULT 'SIN ESPECIFICAR',
-	sede_localidad char(8) DEFAULT '00000000', 
+	sede_direccion nvarchar(255),
+	sede_localidad char(8), 
 	sede_nombre nvarchar(255),
 	sede_telefono nvarchar(255) DEFAULT 'SIN ESPECIFICAR',
 	sede_mail nvarchar(255) DEFAULT 'SIN ESPECIFICAR', 
@@ -284,8 +296,8 @@ BEGIN
 	)
 	SELECT
 		RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY Sede_nombre) AS VARCHAR(8)), 8),
-		ISNULL(Sede_Direccion, 'SIN ESPECIFICAR'),
-		ISNULL(l.localidad_id, '00000000') sede_localidad,
+		Sede_Direccion,
+		l.localidad_id sede_localidad,
 		Sede_Nombre,
 		ISNULL(Sede_Telefono, 'SIN ESPECIFICAR'),
 		ISNULL(Sede_Mail, 'SIN ESPECIFICAR')
@@ -297,7 +309,12 @@ BEGIN
 			Sede_Nombre, 
 			Sede_Telefono,  
 			Sede_Mail
-		FROM gd_esquema.Maestra) gd
+		FROM gd_esquema.Maestra
+		WHERE
+			Sede_Direccion IS NOT NULL
+			AND Sede_Localidad IS NOT NULL
+			AND Sede_Provincia IS NOT NULL
+			AND Sede_Provincia IS NOT NULL) gd
 	LEFT JOIN GRUPO_43.localidad l 
 		ON l.localidad_descripcion = gd.Sede_Localidad
 		AND l.localidad_provincia = gd.Sede_provincia;
