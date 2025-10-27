@@ -590,10 +590,11 @@ GO
 
 CREATE TABLE GRUPO_43.instancia_final(
 	instancia_final_id CHAR(8) CONSTRAINT PK_instancia_final PRIMARY KEY,
+	instancia_final_curso char(8),
 	instancia_final_hora NVARCHAR(255) NOT NULL,
 	instancia_final_descripcion NVARCHAR(255) NOT NULL,
 	instancia_final_fecha DATETIME2(6)
-	-- FOREIGN KEY(instancia_final_curso) REFERENCES GRUPO43.curso(curso_id)
+	FOREIGN KEY(instancia_final_curso) REFERENCES GRUPO_43.curso
 );
 GO
 
@@ -606,25 +607,30 @@ BEGIN
 
 	INSERT INTO GRUPO_43.instancia_final (
 	instancia_final_id,
+	instancia_final_curso,
 	instancia_final_hora, 
 	instancia_final_fecha, 
 	instancia_final_descripcion
-	--instancia_final_curso
 	)
 	 SELECT DISTINCT
         RIGHT('00000000' + CAST(ROW_NUMBER() OVER (ORDER BY instancia_final_fecha) AS VARCHAR(8)), 8) AS instancia_final_id,
-        instancia_final_hora,
+        Curso_Codigo,
+		instancia_final_hora,
         instancia_final_fecha,
         instancia_final_descripcion
     FROM (
         SELECT DISTINCT
+			Curso_Codigo,
             Examen_final_Hora AS instancia_final_hora,
             Examen_final_Fecha AS instancia_final_fecha,
             Examen_final_Descripcion AS instancia_final_descripcion
         FROM gd_esquema.Maestra
-        WHERE Examen_final_Fecha IS NOT NULL
+        WHERE 
+			Curso_Codigo IS NOT NULL
+			AND Examen_final_Fecha IS NOT NULL
+			AND Examen_Final_Fecha IS NOT NULL
+			AND Examen_Final_Descripcion IS NOT NULL
     ) AS instancia;
-	-- LEFT JOIN GRUPO_43.curso ON instancia.instancia_final_curso = curso_id
 END 
 GO
 
