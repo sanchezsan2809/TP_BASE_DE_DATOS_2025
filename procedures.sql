@@ -707,7 +707,7 @@ BEGIN
         FROM gd_esquema.Maestra
         WHERE 
 			Curso_Codigo IS NOT NULL
-			AND Examen_final_Fecha IS NOT NULL
+			AND Examen_Final_Hora IS NOT NULL
 			AND Examen_Final_Fecha IS NOT NULL
 			AND Examen_Final_Descripcion IS NOT NULL
     ) AS instancia;
@@ -716,7 +716,7 @@ GO
 
 CREATE TABLE GRUPO_43.inscripcion_final(
 	inscripcion_final_nro BIGINT CONSTRAINT PK_inscripcion_final PRIMARY KEY,
-	inscripcion_final_fecha VARCHAR(255) NOT NULL,
+	inscripcion_final_fecha DATETIME2(6) NOT NULL,
 	inscripcion_final_instancia CHAR(8),
 	inscripcion_final_alumno_legajo BIGINT,
 	FOREIGN KEY(inscripcion_final_instancia) REFERENCES GRUPO_43.instancia_final(instancia_final_id),
