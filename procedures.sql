@@ -637,10 +637,10 @@ GO
 CREATE TABLE GRUPO_43.inscripcion_final(
 	inscripcion_final_nro BIGINT CONSTRAINT PK_inscripcion_final PRIMARY KEY,
 	inscripcion_final_fecha VARCHAR(255) NOT NULL,
-	--inscripcion_final_instancia CHAR(8),
-	--inscripcion_final_alumno_id CHAR(8),
-	--FOREIGN KEY(inscripcion_final_instancia) REFERENCES GRUPO_43.instancia_final(instancia_final_id)
-	-- FOREIGN KEY(inscripcion_final_alumno_id) REFERENCES GRUPO_43.alumno(alumno_id)
+	inscripcion_final_instancia CHAR(8),
+	inscripcion_final_alumno_legajo BIGINT,
+	FOREIGN KEY(inscripcion_final_instancia) REFERENCES GRUPO_43.instancia_final(instancia_final_id),
+	FOREIGN KEY(inscripcion_final_alumno_legajo) REFERENCES GRUPO_43.alumno
 );
 GO
 
@@ -652,23 +652,30 @@ BEGIN
 
 	INSERT INTO GRUPO_43.inscripcion_final(
 	inscripcion_final_nro,
-	inscripcion_final_fecha 
-	--inscripcion_final_instancia
-	--instancia_final_alumno_id
+	inscripcion_final_fecha, 
+	inscripcion_final_instancia,
+	inscripcion_final_alumno_legajo
 	)
 	SELECT DISTINCT
         inscripcion_final_nro,
-        inscripcion_final_fecha
-        --inscripcion_final_instancia
-		--inscripcion_final_alumno_id
+        inscripcion_final_fecha,
+        i.instancia_final_id inscripcion_final_instancia,
+		inscripcion_final_alumno_legajo
     FROM (
         SELECT DISTINCT
             Inscripcion_Final_Nro AS inscripcion_final_nro,
-            Inscripcion_Final_Fecha AS inscripcion_final_fecha
+            Inscripcion_Final_Fecha AS inscripcion_final_fecha, 
+			Alumno_Legajo as inscripcion_final_alumno_legajo,
+			Examen_Final_Descripcion, 
+			Examen_Final_Fecha, 
+			Examen_Final_Hora
         FROM gd_esquema.Maestra
         WHERE Inscripcion_Final_Nro IS NOT NULL
-    ) AS inscripcion;
-	--LEFT JOIN GRUPO_43.instancia_final if ON 
+    ) gd
+	LEFT JOIN GRUPO_43.instancia_final i 
+	ON gd.Examen_Final_Descripcion = i.instancia_final_descripcion
+	AND gd.Examen_Final_Fecha = i.instancia_final_fecha
+	AND gd.Examen_Final_Hora = i.instancia_final_hora
 END 
 GO
 
@@ -832,6 +839,3 @@ GO
 
 EXEC GRUPO_43.pagos;
 GO
-
-SELECT * 
-FROM GRUPO_43.modulo
