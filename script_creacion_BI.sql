@@ -2,10 +2,10 @@ USE GD2C2025
 GO
 
 IF OBJECT_ID('GRUPO_43.bi_dim_tiempo', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_tiempo;
+IF OBJECT_ID('GRUPO_43.bi_dim_sede', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_sede;
 IF OBJECT_ID('GRUPO_43.bi_dim_alumno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_alumno;
 IF OBJECT_ID('GRUPO_43.bi_dim_profesor', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_profesor;
 IF OBJECT_ID('GRUPO_43.bi_dim_curso', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_curso;
-IF OBJECT_ID('GRUPO_43.bi_dim_sede', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_sede;
 IF OBJECT_ID('GRUPO_43.bi_dim_medio_pago', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_medio_pago;
 IF OBJECT_ID('GRUPO_43.bi_dim_turno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_turno;
 
@@ -29,6 +29,13 @@ CREATE TABLE GRUPO_43.bi_dim_tiempo(
 		CHECK (dia BETWEEN 1 AND 31)
 ); 
 
+CREATE TABLE GRUPO_43.bi_dim_sede(
+	id_dim_sede INT IDENTITY PRIMARY KEY, 
+	sede_id CHAR(8) NOT NULL, 
+	nombre NVARCHAR(255) NOT NULL
+); 
+
+
 CREATE TABLE GRUPO_43.bi_dim_alumno(
 	id_dim_alumno INT IDENTITY PRIMARY KEY,
 	alumno_legajo BIGINT NOT NULL, 
@@ -38,14 +45,15 @@ CREATE TABLE GRUPO_43.bi_dim_alumno(
 		CHECK(edad >= 18), 
 	rango_etario INT NOT NULL
 		CHECK(rango_etario BETWEEN 0 AND 3),
-	sede_actual char(8) NOT NULL
+	id_dim_sede_actual INT NOT NULL,
+	FOREIGN KEY(id_dim_sede_actual) REFERENCES GRUPO_43.bi_dim_sede
 ); 
 
 CREATE TABLE GRUPO_43.bi_dim_profesor(
 	id_dim_profesor INT IDENTITY PRIMARY KEY,
 	profesor_id char(8) NOT NULL,
-	nombre CHAR(255) NOT NULL,
-	apellido CHAR(255) NOT NULL,
+	nombre varchar(255) NOT NULL,
+	apellido varchar(255) NOT NULL,
 	edad INT NOT NULL
 		CHECK (edad >= 18),
 	rango_etario INT NOT NULL
@@ -59,11 +67,6 @@ CREATE TABLE GRUPO_43.bi_dim_curso(
 	precio decimal(8,2) NOT NULL
 ); 
 
-CREATE TABLE GRUPO_43.bi_dim_sede(
-	id_dim_sede INT IDENTITY PRIMARY KEY, 
-	sede_id CHAR(8) NOT NULL, 
-	nombre NVARCHAR(255) NOT NULL
-); 
 
 CREATE TABLE GRUPO_43.bi_dim_medio_pago(
 	id_dim_medio_pago INT IDENTITY PRIMARY KEY,
@@ -72,25 +75,22 @@ CREATE TABLE GRUPO_43.bi_dim_medio_pago(
 
 CREATE TABLE GRUPO_43.bi_dim_turno(
 	id_dim_turno INT IDENTITY PRIMARY KEY, 
-	turno char(8) NOT NULL
+	turno nvarchar(255) NOT NULL
 ); 
 
 --	Creación de tablas de hechos
 CREATE TABLE GRUPO_43.bi_facto_inscripciones(
-	id_f_insc INT IDENTITY PRIMARY KEY, 
-	id_dim_tiempo INT NOT NULL, 
+	id_f_insc INT IDENTITY PRIMARY KEY,  
 	id_dim_sede INT NOT NULL,
 	id_dim_curso INT NOT NULL, 
 	id_dim_alumno INT NOT NULL, 
 	id_dim_turno INT NOT NULL, 
 	estado_inscripcion BIT, 
 	id_dim_tiempo_inscripcion INT NOT NULL,
-	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo, 
+	FOREIGN KEY(id_dim_tiempo_inscripcion) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
 	FOREIGN KEY(id_dim_curso) REFERENCES GRUPO_43.bi_dim_curso, 
 	FOREIGN KEY(id_dim_alumno) REFERENCES GRUPO_43.bi_dim_alumno,
-	FOREIGN KEY(id_dim_turno) REFERENCES GRUPO_43.bi_dim_alumno,
-	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_turno) REFERENCES GRUPO_43.bi_dim_turno
 ); 
 
@@ -145,7 +145,7 @@ CREATE TABLE GRUPO_43.bi_facto_pagos(
 	FOREIGN KEY(id_dim_medio_pago) REFERENCES GRUPO_43.bi_dim_medio_pago,
 	FOREIGN KEY(id_dim_curso) REFERENCES GRUPO_43.bi_dim_curso,
 	FOREIGN KEY(id_dim_tiempo_vencimiento) REFERENCES GRUPO_43.bi_dim_tiempo,
-	FOREIGN KEY(id_dim_tiempo_pago) REFERENCES GRUPO_43.bi_dim_tiempo, 
+	FOREIGN KEY(id_dim_tiempo_pago) REFERENCES GRUPO_43.bi_dim_tiempo 
 ); 
 
 CREATE TABLE GRUPO_43.bi_facto_satisfaccion(
@@ -171,6 +171,9 @@ GO
 CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_tiempo
 AS
 BEGIN
+	SET NOCOUNT ON; 
+	DELETE FROM GRUPO_43.bi_dim_tiempo; 
+
 	DECLARE @fecha DATE = '2019-01-01'; 
 	DECLARE @fechafin DATE = '2025-12-31'; 
 
@@ -186,7 +189,7 @@ BEGIN
 		VALUES(
 			@fecha, 
 			YEAR(@fecha),
-			CASE WHEN MONTH(@fecha) <= 6 THEN 1 ELSE 2, 
+			CASE WHEN MONTH(@fecha) <= 6 THEN 1 ELSE 2 END, 
 			MONTH(@fecha), 
 			DAY(@fecha)
 		)
@@ -197,16 +200,36 @@ BEGIN
 END; 
 GO
 
+CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_sede 
+AS
+BEGIN
+	SET NOCOUNT ON; 
+	DELETE FROM GRUPO_43.bi_dim_sede; 
+
+	INSERT INTO GRUPO_43.bi_dim_sede(
+		sede_id, 
+		nombre
+	)
+	SELECT
+		sede_id,
+		sede_nombre
+	FROM GRUPO_43.sede
+END
+GO
+
 CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_alumno
 AS
 BEGIN
+	SET NOCOUNT ON;
+	DELETE FROM GRUPO_43.bi_dim_alumno;
+
 	INSERT INTO GRUPO_43.bi_dim_alumno(
 		alumno_legajo, 
 		nombre, 
 		apellido, 
 		edad, 
 		rango_etario, 
-		sede_actual
+		id_dim_sede_actual
 	)
 	SELECT 
 		alumno_legajo, 
@@ -223,12 +246,16 @@ BEGIN
 	FROM GRUPO_43.alumno
 	LEFT JOIN GRUPO_43.inscripcion_curso ON alumno_legajo = inscrip_curso_alumno_legajo
 	LEFT JOIN  GRUPO_43.curso ON inscrip_curso_codigo = curso_codigo
+	LEFT JOIN GRUPO_43.bi_dim_sede ON curso_sede_id = sede_id
 END
 GO
 
 CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_profesor
 AS
 BEGIN
+	SET NOCOUNT ON;
+	DELETE FROM GRUPO_43.bi_dim_profesor; 
+
 	INSERT INTO GRUPO_43.bi_dim_profesor(
 		profesor_id, 
 		nombre, 
@@ -254,18 +281,47 @@ GO
 CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_curso 
 AS
 BEGIN
+	SET NOCOUNT ON; 
+	DELETE FROM GRUPO_43.bi_dim_curso; 
+
 	INSERT INTO GRUPO_43.bi_dim_curso(
 		curso_codigo, 
 		categoria,
 		precio
 	)
-	SELECT
+	SELECT DISTINCT
 		curso_codigo, 
-		detalle_curso_categoria, 
-		detalle_factura_importe
+		detalle_curso_categoria 
 	FROM GRUPO_43.curso
 	JOIN GRUPO_43.detalle_curso ON curso_detalle_curso_id = detalle_curso_id
-	LEFT JOIN GRUPO_43.detalle_factura ON detalle_curso_id = detalle_factura_curso_id
 END
 GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_medio_pago
+AS
+BEGIN
+	SET NOCOUNT ON; 
+	DELETE FROM GRUPO_43.bi_dim_medio_pago; 
+
+	INSERT INTO GRUPO_43.bi_dim_medio_pago(
+		tipo_medio_pago
+	)
+	SELECT DISTINCT pago_medio_de_pago
+	FROM GRUPO_43.pago
+END
+GO; 
+
+CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_turno
+AS
+BEGIN
+	SET NOCOUNT ON; 
+	DELETE FROM GRUPO_43.bi_dim_turno; 
+
+	INSERT INTO GRUPO_43.bi_dim_turno(
+		turno
+	)
+	SELECT DISTINCT ISNULL(turno_descripcion, 'No especificado')
+	FROM GRUPO_43.turno
+END
+
 
