@@ -23,14 +23,10 @@ CREATE TABLE GRUPO_43.bi_dim_tiempo(
 		CHECK (anio BETWEEN 2000 AND 2025),
 	semestre INT NOT NULL
 		CHECK (semestre IN (1,2)),
-	cuatrimestre INT NOT NULL
-		CHECK(cuatrimestre BETWEEN 1 AND 3),
 	mes INT NOT NULL
 		CHECK(mes BETWEEN 1 AND 12),
 	dia INT NOT NULL
-		CHECK (dia BETWEEN 1 AND 31),
-	dia_semana INT NOT NULL
-		CHECK (dia_semana BETWEEN 1 AND 7)
+		CHECK (dia BETWEEN 1 AND 31)
 ); 
 
 CREATE TABLE GRUPO_43.bi_dim_alumno(
@@ -38,7 +34,6 @@ CREATE TABLE GRUPO_43.bi_dim_alumno(
 	alumno_legajo BIGINT NOT NULL, 
 	nombre VARCHAR(255) NOT NULL, 
 	apellido VARCHAR(255) NOT NULL,
-	fecha_nacimiento smalldatetime NOT NULL,
 	edad INT NOT NULL
 		CHECK(edad >= 18), 
 	rango_etario INT NOT NULL
@@ -51,7 +46,6 @@ CREATE TABLE GRUPO_43.bi_dim_profesor(
 	profesor_id char(8) NOT NULL,
 	nombre CHAR(255) NOT NULL,
 	apellido CHAR(255) NOT NULL,
-	fecha_nacimiento smalldatetime NOT NULL,
 	edad INT NOT NULL
 		CHECK (edad >= 18),
 	rango_etario INT NOT NULL
@@ -170,5 +164,108 @@ CREATE TABLE GRUPO_43.bi_facto_satisfaccion(
 	FOREIGN KEY (id_dim_profesor) REFERENCES GRUPO_43.bi_dim_profesor,
 	FOREIGN KEY (id_dim_alumno) REFERENCES GRUPO_43.bi_dim_alumno
 ); 
+GO
 
+--	Procedures para dimensiones
+
+CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_tiempo
+AS
+BEGIN
+	DECLARE @fecha DATE = '2019-01-01'; 
+	DECLARE @fechafin DATE = '2025-12-31'; 
+
+	WHILE @fecha <= @fechafin
+	BEGIN
+		INSERT INTO GRUPO_43.bi_dim_tiempo(
+			fecha,
+			anio,
+			semestre, 
+			mes, 
+			dia
+		)
+		VALUES(
+			@fecha, 
+			YEAR(@fecha),
+			CASE WHEN MONTH(@fecha) <= 6 THEN 1 ELSE 2, 
+			MONTH(@fecha), 
+			DAY(@fecha)
+		)
+
+		SET @fecha = DATEADD(DAY, 1, @fecha);
+	END
+
+END; 
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_alumno
+AS
+BEGIN
+	INSERT INTO GRUPO_43.bi_dim_alumno(
+		alumno_legajo, 
+		nombre, 
+		apellido, 
+		edad, 
+		rango_etario, 
+		sede_actual
+	)
+	SELECT 
+		alumno_legajo, 
+		alumno_nombre, 
+		alumno_apellido, 
+		DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()), 
+		CASE
+			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 18 AND 25 THEN 0
+			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 26 AND 35 THEN 1 
+			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 36 AND 50 THEN 2
+			ELSE 3
+		END,
+		ISNULL(curso_sede_id, 'NO ASIGNADO')
+	FROM GRUPO_43.alumno
+	LEFT JOIN GRUPO_43.inscripcion_curso ON alumno_legajo = inscrip_curso_alumno_legajo
+	LEFT JOIN  GRUPO_43.curso ON inscrip_curso_codigo = curso_codigo
+END
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_profesor
+AS
+BEGIN
+	INSERT INTO GRUPO_43.bi_dim_profesor(
+		profesor_id, 
+		nombre, 
+		apellido, 
+		edad, 
+		rango_etario
+	)
+	SELECT 
+		profesor_id, 
+		profesor_nombre, 
+		profesor_apellido,
+		DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()), 
+		CASE
+			WHEN DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()) BETWEEN 18 AND 25 THEN 0
+			WHEN DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()) BETWEEN 26 AND 35 THEN 1 
+			WHEN DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()) BETWEEN 36 AND 50 THEN 2
+			ELSE 3
+		END
+	FROM GRUPO_43.profesor
+END
+GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_curso 
+AS
+BEGIN
+	INSERT INTO GRUPO_43.bi_dim_curso(
+		curso_codigo, 
+		categoria,
+		precio
+	)
+	SELECT
+		curso_codigo, 
+		detalle_curso_categoria, 
+		detalle_factura_importe
+	FROM GRUPO_43.curso
+	JOIN GRUPO_43.detalle_curso ON curso_detalle_curso_id = detalle_curso_id
+	LEFT JOIN GRUPO_43.detalle_factura ON detalle_curso_id = detalle_factura_curso_id
+END
+GO
 
