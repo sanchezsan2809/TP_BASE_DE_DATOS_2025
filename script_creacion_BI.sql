@@ -581,3 +581,23 @@ FROM GRUPO_43.bi_facto_cursadas c
 JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = c.id_dim_sede
 JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = c.id_dim_tiempo_inicio
 GROUP BY s.sede_id, t.anio
+GO
+
+--	4) Tiempo promedio de finalización de curso
+CREATE OR ALTER VIEW GRUPO_43.bi_tiempo_promedio_finalizacion_curso
+AS
+SELECT 
+	c.categoria CATEGORIA,
+	ti.anio ANIO_INICIO,
+	AVG(DATEDIFF(DAY, ti.fecha, tf.fecha)) PROMEDIO_TIEMPO_FINALIZACION
+FROM GRUPO_43.bi_facto_cursadas cu
+JOIN GRUPO_43.bi_dim_tiempo ti ON ti.id_dim_tiempo = cu.id_dim_tiempo_inicio
+JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = cu.id_dim_curso
+JOIN GRUPO_43.bi_dim_alumno a ON a.id_dim_alumno = cu.id_dim_alumno
+JOIN GRUPO_43.bi_facto_finales f 
+	ON f.id_dim_curso = c.id_dim_curso
+	AND f.id_dim_alumno = a.id_dim_alumno
+JOIN GRUPO_43.bi_dim_tiempo tf ON tf.id_dim_tiempo = f.id_dim_tiempo
+WHERE cu.estado_cursada = 1
+GROUP BY c.categoria, ti.anio
+GO
