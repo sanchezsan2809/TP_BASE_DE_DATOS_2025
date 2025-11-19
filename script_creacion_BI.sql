@@ -74,7 +74,7 @@ CREATE TABLE GRUPO_43.bi_dim_medio_pago(
 
 CREATE TABLE GRUPO_43.bi_dim_turno(
 	id_dim_turno INT IDENTITY PRIMARY KEY, 
-	turno nvarchar(255) NOT NULL
+	turno char(8) NOT NULL
 ); 
 
 --	Creación de tablas de hechos
@@ -601,3 +601,18 @@ JOIN GRUPO_43.bi_dim_tiempo tf ON tf.id_dim_tiempo = f.id_dim_tiempo
 WHERE cu.estado_cursada = 1
 GROUP BY c.categoria, ti.anio
 GO
+
+--	5) Nota promedio de finales
+CREATE OR ALTER VIEW GRUPO_43.bi_nota_promedio_finales
+AS
+SELECT
+	a.rango_etario RANGO_ETARIO,
+	c.categoria,
+	t.anio,
+	t.semestre,
+	AVG (f.nota_final) PROMEDIO_NOTA
+FROM GRUPO_43.bi_facto_finales f
+JOIN GRUPO_43.bi_dim_tiempo t ON f.id_dim_tiempo = t.id_dim_tiempo
+JOIN GRUPO_43.bi_dim_alumno a ON a.id_dim_alumno = f.id_dim_alumno
+JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = f.id_dim_curso
+GROUP BY a.rango_etario, c.categoria, t.anio, t.semestre
