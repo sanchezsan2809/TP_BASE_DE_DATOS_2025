@@ -1,19 +1,34 @@
 USE GD2C2025
 GO
+--	1) Drop vistas
+DROP VIEW IF EXISTS GRUPO_43.bi_view_categorias_mas_solicitadas; 
+DROP VIEW IF EXISTS  GRUPO_43.bi_view_turnos_mas_solicitados; 
+DROP VIEW IF EXISTS  GRUPO_43.bi_tasa_rechazo_inscripciones;
+DROP VIEW IF EXISTS  GRUPO_43.bi_desempeño_cursada_por_sede;
+DROP VIEW IF EXISTS  GRUPO_43.bi_tiempo_promedio_finalizacion_curso;
+DROP VIEW IF EXISTS  GRUPO_43.bi_nota_promedio_finales;
+DROP VIEW IF EXISTS  GRUPO_43.bi_tasa_ausentismo_finales;
+DROP VIEW IF EXISTS  GRUPO_43.bi_desvio_pagos;
+DROP VIEW IF EXISTS  GRUPO_43.tasa_morosidad_financiera_mensual;
+DROP VIEW IF EXISTS  GRUPO_43.ingresos_por_categoria_curso;
+DROP VIEW IF EXISTS  GRUPO_43.indice_satisfaccion_anual;
 
-IF OBJECT_ID('GRUPO_43.bi_dim_tiempo', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_tiempo;
-IF OBJECT_ID('GRUPO_43.bi_dim_sede', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_sede;
-IF OBJECT_ID('GRUPO_43.bi_dim_alumno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_alumno;
-IF OBJECT_ID('GRUPO_43.bi_dim_profesor', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_profesor;
-IF OBJECT_ID('GRUPO_43.bi_dim_curso', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_curso;
-IF OBJECT_ID('GRUPO_43.bi_dim_medio_pago', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_medio_pago;
-IF OBJECT_ID('GRUPO_43.bi_dim_turno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_turno;
-
+--	2) Drop tablas de hechos
 IF OBJECT_ID('GRUPO_43.bi_facto_inscripciones', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_inscripciones;
 IF OBJECT_ID('GRUPO_43.bi_facto_cursadas', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_cursadas;
 IF OBJECT_ID('GRUPO_43.bi_facto_finales', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_finales;
 IF OBJECT_ID('GRUPO_43.bi_facto_pagos', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_pagos;
 IF OBJECT_ID('GRUPO_43.bi_facto_satisfaccion', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_satisfaccion;
+
+--	3) Drop dimensiones
+IF OBJECT_ID('GRUPO_43.bi_dim_tiempo', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_tiempo;
+IF OBJECT_ID('GRUPO_43.bi_dim_alumno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_alumno;
+IF OBJECT_ID('GRUPO_43.bi_dim_sede', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_sede;
+IF OBJECT_ID('GRUPO_43.bi_dim_profesor', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_profesor;
+IF OBJECT_ID('GRUPO_43.bi_dim_curso', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_curso;
+IF OBJECT_ID('GRUPO_43.bi_dim_medio_pago', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_medio_pago;
+IF OBJECT_ID('GRUPO_43.bi_dim_turno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_turno;
+
 
 --	Creación de tablas de dimensiones
 CREATE TABLE GRUPO_43.bi_dim_tiempo(
@@ -161,7 +176,7 @@ GO
 
 --	Procedures para dimensiones
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_tiempo
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_tiempo
 AS
 BEGIN
 	SET NOCOUNT ON; 
@@ -193,7 +208,7 @@ BEGIN
 END; 
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_sede 
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_sede 
 AS
 BEGIN
 	SET NOCOUNT ON; 
@@ -210,7 +225,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_alumno
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_alumno
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -243,7 +258,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_profesor
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_profesor
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -271,7 +286,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_curso 
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_curso 
 AS
 BEGIN
 	SET NOCOUNT ON; 
@@ -289,7 +304,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_medio_pago
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_medio_pago
 AS
 BEGIN
 	SET NOCOUNT ON; 
@@ -300,10 +315,10 @@ BEGIN
 	)
 	SELECT DISTINCT pago_medio_de_pago
 	FROM GRUPO_43.pago
-END
-GO; 
+END;
+GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_dim_turno
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_turno
 AS
 BEGIN
 	SET NOCOUNT ON; 
@@ -318,7 +333,7 @@ END
 GO
 
 --	Procedures para hechos
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_facto_inscripciones
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_inscripciones
 AS
 BEGIN
     SET NOCOUNT ON; 
@@ -338,7 +353,7 @@ BEGIN
         c.id_dim_curso,
         a.id_dim_alumno, 
         tu.id_dim_turno,
-        i.inscrip_curso_estado
+        CASE WHEN i.inscrip_curso_estado = 'Confirmada' THEN 1 ELSE 0 END
     FROM GRUPO_43.inscripcion_curso i
     JOIN GRUPO_43.bi_dim_tiempo t 
         ON t.fecha = i.inscrip_curso_fecha
@@ -357,7 +372,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_facto_cursadas AS
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_cursadas AS
 BEGIN
     SET NOCOUNT ON; 
     DELETE FROM GRUPO_43.bi_facto_cursadas; 
@@ -398,29 +413,35 @@ BEGIN
         ON prodim.profesor_id = c.curso_profesor_id
     JOIN GRUPO_43.bi_dim_sede sdim 
         ON sdim.sede_id = c.curso_sede_id
-    JOIN GRUPO_43.bi_dim_tiempo t_ini 
-        ON t_ini.fecha = c.curso_fecha_inicio
-    JOIN GRUPO_43.bi_dim_tiempo t_fin 
-        ON t_fin.fecha = c.curso_fecha_fin
 
     -- Nota TP
+   JOIN GRUPO_43.bi_dim_tiempo t_ini 
+        ON t_ini.fecha = TRY_CONVERT(date, c.curso_fecha_inicio)
+    JOIN GRUPO_43.bi_dim_tiempo t_fin 
+        ON t_fin.fecha = TRY_CONVERT(date, c.curso_fecha_fin)
+
     LEFT JOIN GRUPO_43.tp tp
         ON tp.tp_alumno_legajo = a.alumno_legajo
         AND tp.tp_curso_codigo = c.curso_codigo
-        AND tp.tp_fecha_evaluacion BETWEEN c.curso_fecha_inicio AND c.curso_fecha_fin
+        AND TRY_CONVERT(date, tp.tp_fecha_evaluacion)
+            BETWEEN TRY_CONVERT(date, c.curso_fecha_inicio)
+                AND TRY_CONVERT(date, c.curso_fecha_fin)
+
 
     -- Evaluaciones (nota mínima en rango de fechas)
-    CROSS APPLY (
+   CROSS APPLY (
         SELECT MIN(e.evaluacion_nota) AS nota_minima
         FROM GRUPO_43.evaluacion e
         WHERE e.evaluacion_alumno_legajo = a.alumno_legajo
           AND e.evaluacion_curso_id = c.curso_codigo
-          AND e.evaluacion_fecha BETWEEN c.curso_fecha_inicio AND c.curso_fecha_fin
+          AND TRY_CONVERT(date, e.evaluacion_fecha)
+                BETWEEN TRY_CONVERT(date, c.curso_fecha_inicio)
+                    AND TRY_CONVERT(date, c.curso_fecha_fin)
     ) eval;
 END;
 GO
 
-CREATE OR ALTER PROCEDURE bi_facto_finales
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_finales
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -451,7 +472,7 @@ BEGIN
 END
 GO 
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_facto_pagos
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_pagos
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -491,12 +512,19 @@ BEGIN
 		SELECT MAX(p2.pago_fecha)
 		FROM GRUPO_43.pago p2
 		WHERE p2.pago_fact_id = f.fact_nro)
-	GROUP BY f.fact_nro
+	GROUP BY 
+		tf.id_dim_tiempo,
+        s.id_dim_sede,
+        mp.id_dim_medio_pago,
+        cu.id_dim_curso,
+        tv.id_dim_tiempo,
+        tp.id_dim_tiempo,
+        f.fact_importe_total;
 
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.bi_facto_satisfaccion
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_satisfaccion
 AS
 BEGIN
 	SET NOCOUNT ON; 
@@ -531,6 +559,24 @@ BEGIN
 	JOIN GRUPO_43.bi_dim_profesor p ON p.profesor_id = c.curso_profesor_id
 END
 GO
+--	EXEC de dimensiones
+EXEC GRUPO_43.cargar_dimension_profesor;
+EXEC GRUPO_43.cargar_dimension_sede;
+EXEC GRUPO_43.cargar_dimension_alumno;
+EXEC GRUPO_43.cargar_dimension_tiempo;
+EXEC GRUPO_43.cargar_dimension_turno;
+EXEC GRUPO_43.cargar_dimension_medio_pago;
+EXEC GRUPO_43.cargar_dimension_curso; 
+
+--	EXEC de tablas de hechos
+EXEC GRUPO_43.cargar_facto_satisfaccion;
+EXEC GRUPO_43.cargar_facto_pagos;
+EXEC GRUPO_43.cargar_facto_inscripciones;
+EXEC GRUPO_43.cargar_facto_cursadas;
+EXEC GRUPO_43.cargar_facto_finales;
+GO
+
+
 --	Creación de vistas
 --	1) Categorías y turnos más solicitados
 CREATE OR ALTER VIEW GRUPO_43.bi_view_categorias_mas_solicitadas
@@ -640,7 +686,7 @@ SELECT
 	tv.anio AÑO,
 	tv.semestre SEMESTRE,
 	CAST(COUNT(CASE WHEN tp.fecha > tv.fecha AND p.estado_pago = 1 THEN 1 END) AS FLOAT)
-	/ NULLIF(CAST(COUNT (CASE WHEN p.estado_pago = 1 THEN 1 END)), 0) * 100 AS TASA_DESVIOS
+	/ NULLIF(CAST(COUNT (CASE WHEN p.estado_pago = 1 THEN 1 END) AS float), 0) * 100 AS TASA_DESVIOS
 FROM GRUPO_43.bi_facto_pagos p
 JOIN GRUPO_43.bi_dim_tiempo tv ON tv.id_dim_tiempo = p.id_dim_tiempo_vencimiento
 JOIN GRUPO_43.bi_dim_tiempo tp ON tp.id_dim_tiempo = p.id_dim_tiempo_pago
@@ -716,3 +762,35 @@ JOIN GRUPO_43.bi_dim_profesor p ON p.id_dim_profesor = s.id_dim_profesor
 JOIN GRUPO_43.bi_dim_sede se ON se.id_dim_sede = s.id_dim_sede
 JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = s.id_dim_tiempo
 GROUP BY t.anio, p.rango_etario, se.sede_id
+GO
+
+
+SELECT *
+FROM GRUPO_43.bi_view_categorias_mas_solicitadas
+
+SELECT *
+FROM GRUPO_43.bi_view_turnos_mas_solicitados
+
+SELECT *
+FROM GRUPO_43.bi_desempeño_cursada_por_sede
+
+SELECT *
+FROM GRUPO_43.bi_tiempo_promedio_finalizacion_curso
+
+SELECT *
+FROM GRUPO_43.bi_nota_promedio_finales
+
+SELECT *
+FROM GRUPO_43.bi_tasa_ausentismo_finales
+
+SELECT *
+FROM GRUPO_43.bi_desvio_pagos
+
+SELECT *
+FROM GRUPO_43.tasa_morosidad_financiera_mensual
+
+SELECT *
+FROM GRUPO_43.ingresos_por_categoria_curso
+
+SELECT *
+FROM GRUPO_43.indice_satisfaccion_anual
