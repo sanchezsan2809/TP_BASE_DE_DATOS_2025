@@ -530,3 +530,28 @@ BEGIN
 	JOIN GRUPO_43.bi_dim_curso cu ON cu.curso_codigo = c.curso_codigo
 	JOIN GRUPO_43.bi_dim_profesor p ON p.profesor_id = c.curso_profesor_id
 END
+GO
+--	Creación de vistas
+--	1) Categorías y turnos más solicitados
+CREATE OR ALTER VIEW GRUPO_43.bi_view_categorias_mas_solicitadas
+AS
+SELECT TOP 3
+	c.categoria CATEGORIA, 
+	COUNT(CASE WHEN i.estado_inscripcion = 1 THEN 1 END) INSCRIPCIONES_ACEPTADAS
+FROM GRUPO_43.bi_facto_inscripciones i
+JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = i.id_dim_curso
+GROUP BY c.categoria
+ORDER BY inscripciones_aceptadas DESC
+GO
+
+CREATE OR ALTER VIEW GRUPO_43.bi_view_turnos_mas_solicitados
+AS
+SELECT TOP 3
+	t.turno TURNO, 
+	COUNT(CASE WHEN i.estado_inscripcion = 1 THEN 1 END) INSCRIPCIONES_ACEPTADAS
+FROM GRUPO_43.bi_facto_inscripciones i
+JOIN GRUPO_43.bi_dim_turno t ON t.id_dim_turno = i.id_dim_turno
+GROUP BY t.turno
+ORDER BY inscripciones_aceptadas DESC
+GO
+
