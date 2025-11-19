@@ -631,3 +631,18 @@ FROM GRUPO_43.bi_facto_finales f
 JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = f.id_dim_tiempo
 JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = f.id_dim_sede
 GROUP BY t.anio, t.semestre, s.sede_id
+GO
+
+--	7) Desvío de pagos
+CREATE OR ALTER VIEW GRUPO_43.bi_desvio_pagos
+AS
+SELECT
+	tv.anio AÑO,
+	tv.semestre SEMESTRE,
+	CAST(COUNT(CASE WHEN tp.fecha > tv.fecha AND p.estado_pago = 1 THEN 1 END) AS FLOAT)
+	/ NULLIF(CAST(COUNT (CASE WHEN p.estado_pago = 1 THEN 1 END)), 0) * 100 AS TASA_DESVIOS
+FROM GRUPO_43.bi_facto_pagos p
+JOIN GRUPO_43.bi_dim_tiempo tv ON tv.id_dim_tiempo = p.id_dim_tiempo_vencimiento
+JOIN GRUPO_43.bi_dim_tiempo tp ON tp.id_dim_tiempo = p.id_dim_tiempo_pago
+GROUP BY tv.anio, tv.semestre
+GO
