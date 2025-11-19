@@ -149,7 +149,6 @@ CREATE TABLE GRUPO_43.bi_facto_satisfaccion(
 	id_dim_sede INT NOT NULL,
 	id_dim_curso INT NOT NULL, 
 	id_dim_profesor INT NOT NULL,
-	id_dim_alumno INT NOT NULL, 
 	nota_respuesta BIGINT NOT NULL,
 	bloque_satisfaccion INT NOT NULL
 		CHECK(bloque_satisfaccion BETWEEN 0 AND 2), 
@@ -157,7 +156,6 @@ CREATE TABLE GRUPO_43.bi_facto_satisfaccion(
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede, 
 	FOREIGN KEY(id_dim_curso) REFERENCES GRUPO_43.bi_dim_curso,
 	FOREIGN KEY (id_dim_profesor) REFERENCES GRUPO_43.bi_dim_profesor,
-	FOREIGN KEY (id_dim_alumno) REFERENCES GRUPO_43.bi_dim_alumno
 ); 
 GO
 
@@ -497,3 +495,38 @@ BEGIN
 
 END
 GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.bi_facto_satisfaccion
+AS
+BEGIN
+	SET NOCOUNT ON; 
+	DELETE FROM GRUPO_43.bi_facto_satisfaccion; 
+
+	INSERT INTO GRUPO_43.bi_facto_satisfaccion(
+		id_dim_tiempo, 
+		id_dim_sede,
+		id_dim_curso,
+		id_dim_profesor,
+		nota_respuesta,
+		bloque_satisfaccion
+	)
+	SELECT
+		t.id_dim_tiempo,
+		s.id_dim_sede,
+		cu.id_dim_curso,
+		p.id_dim_profesor,
+		de.detalle_encuesta_nota,
+		CASE WHEN de.detalle_encuesta_nota < 5 THEN 0 
+		WHEN de.detalle_encuesta_nota < 7 THEN 1
+		ELSE 2
+		END
+	FROM GRUPO_43.encuesta e
+	JOIN GRUPO_43.detalle_encuesta de 
+		ON de.detalle_encuesta_curso_id = e.encuesta_curso_id 
+		AND de.detalle_encuesta_fecha_registro = e.encuesta_fecha_registro
+	JOIN GRUPO_43.curso c ON c.curso_codigo = e.encuesta_curso_id
+	JOIN GRUPO_43.bi_dim_tiempo t ON t.fecha = de.detalle_encuesta_fecha_registro
+	JOIN GRUPO_43.bi_dim_sede s ON s.sede_id = c.curso_sede_id
+	JOIN GRUPO_43.bi_dim_curso cu ON cu.curso_codigo = c.curso_codigo
+	JOIN GRUPO_43.bi_dim_profesor p ON p.profesor_id = c.curso_profesor_id
+END
