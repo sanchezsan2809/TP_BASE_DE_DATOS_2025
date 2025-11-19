@@ -648,7 +648,6 @@ GROUP BY tv.anio, tv.semestre
 GO
 
 --	8) Tasa de Morosidad Financiera mensual
-
 CREATE OR ALTER VIEW GRUPO_43.tasa_morosidad_financiera_mensual
 AS
 SELECT
@@ -659,3 +658,41 @@ SELECT
 FROM GRUPO_43.bi_facto_pagos p
 JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = p.id_dim_tiempo_vencimiento
 GROUP BY t.anio, t.mes
+GO
+
+--	9) Ingresos por categoría de cursos
+
+CREATE VIEW GRUPO_43.ingresos_por_categoria_curso
+AS
+WITH ingresos AS (
+	SELECT
+		s.sede_id SEDE, 
+		t.anio AÑO, 
+		c.categoria CATEGORIA,
+		SUM(p.monto_pagado) INGRESOS
+	FROM GRUPO_43.bi_facto_pagos p 
+	JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = p.id_dim_sede
+	JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = p.id_dim_tiempo_pago
+	JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = p.id_dim_curso
+	GROUP BY s.sede_id, t.anio, c.categoria
+),
+ranking AS (
+	SELECT
+		SEDE,
+		AÑO,
+		CATEGORIA,
+		INGRESOS,
+		ROW_NUMBER() OVER(
+			PARTITION BY SEDE, AÑO
+			ORDER BY INGRESOS DESC
+		) AS RN
+	FROM ingresos
+)
+SELECT
+	SEDE, 
+	AÑO, 
+	CATEGORIA,
+	INGRESOS
+FROM ranking
+WHERE RN <= 3;
+GO
