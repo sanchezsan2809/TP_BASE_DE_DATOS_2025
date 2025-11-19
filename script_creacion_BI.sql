@@ -696,3 +696,23 @@ SELECT
 FROM ranking
 WHERE RN <= 3;
 GO
+
+--	10) Índice de satisfacción
+CREATE OR ALTER VIEW GRUPO_43.indice_satisfaccion_anual
+AS
+SELECT
+	t.anio AÑO, 
+	p.rango_etario RANGO_ETARIO,
+	se.sede_id SEDE,
+	(
+		(
+			(CAST(COUNT(CASE WHEN s.bloque_satisfaccion = 2 THEN 1 END) AS float) / COUNT(*)) 
+			- 
+			(CAST(COUNT(CASE WHEN s.bloque_satisfaccion = 0 THEN 1 END) AS float) / COUNT(*))
+		) + 100
+	) / 2 AS INDICE_SATISFACCION
+FROM GRUPO_43.bi_facto_satisfaccion s
+JOIN GRUPO_43.bi_dim_profesor p ON p.id_dim_profesor = s.id_dim_profesor
+JOIN GRUPO_43.bi_dim_sede se ON se.id_dim_sede = s.id_dim_sede
+JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = s.id_dim_tiempo
+GROUP BY t.anio, p.rango_etario, se.sede_id
