@@ -610,9 +610,24 @@ SELECT
 	c.categoria,
 	t.anio,
 	t.semestre,
-	AVG (f.nota_final) PROMEDIO_NOTA
+	AVG(CAST((f.nota_final) AS DECIMAL(10,2))) PROMEDIO_NOTA
 FROM GRUPO_43.bi_facto_finales f
 JOIN GRUPO_43.bi_dim_tiempo t ON f.id_dim_tiempo = t.id_dim_tiempo
 JOIN GRUPO_43.bi_dim_alumno a ON a.id_dim_alumno = f.id_dim_alumno
 JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = f.id_dim_curso
 GROUP BY a.rango_etario, c.categoria, t.anio, t.semestre
+GO
+
+--	6) Tasa de ausentismo finales
+CREATE OR ALTER VIEW GRUPO_43.bi_tasa_ausentismo_finales
+AS
+SELECT 
+	t.anio AÑO,
+	t.semestre SEMESTRE,
+	s.sede_id SEDE,
+	CAST(COUNT(CASE WHEN f.presencia_final = 0 THEN 1 END) AS FLOAT) 
+	/ COUNT(*) * 100 AS TASA_AUSENTISMO
+FROM GRUPO_43.bi_facto_finales f
+JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = f.id_dim_tiempo
+JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = f.id_dim_sede
+GROUP BY t.anio, t.semestre, s.sede_id
