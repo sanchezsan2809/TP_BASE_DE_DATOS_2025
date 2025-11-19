@@ -646,3 +646,16 @@ JOIN GRUPO_43.bi_dim_tiempo tv ON tv.id_dim_tiempo = p.id_dim_tiempo_vencimiento
 JOIN GRUPO_43.bi_dim_tiempo tp ON tp.id_dim_tiempo = p.id_dim_tiempo_pago
 GROUP BY tv.anio, tv.semestre
 GO
+
+--	8) Tasa de Morosidad Financiera mensual
+
+CREATE OR ALTER VIEW GRUPO_43.tasa_morosidad_financiera_mensual
+AS
+SELECT
+	t.anio ANIO,
+	t.mes MES, 
+	CAST(SUM(CASE WHEN p.estado_pago = 0 THEN p.monto_facturado END) AS float)
+	/ NULLIF(SUM(p.monto_facturado), 0) * 100 AS TASA_MOROSIDAD
+FROM GRUPO_43.bi_facto_pagos p
+JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = p.id_dim_tiempo_vencimiento
+GROUP BY t.anio, t.mes
