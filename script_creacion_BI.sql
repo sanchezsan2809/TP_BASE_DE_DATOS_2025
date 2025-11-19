@@ -470,7 +470,7 @@ BEGIN
 		monto_pagado,
 		estado_pago
 	)
-	SELECT
+	SELECT 
 		tf.id_dim_tiempo,
 		s.id_dim_sede,
 		mp.id_dim_medio_pago,
@@ -478,8 +478,8 @@ BEGIN
 		tv.id_dim_tiempo,
 		tp.id_dim_tiempo,
 		f.fact_importe_total,
-		p.pago_importe,
-		CASE WHEN p.pago_importe = f.fact_importe_total THEN 1 ELSE 0 END 
+		SUM(p.pago_importe),
+		CASE WHEN SUM(p.pago_importe) = f.fact_importe_total THEN 1 ELSE 0 END 
 	FROM GRUPO_43.pago p
 	JOIN GRUPO_43.factura f ON f.fact_nro = p.pago_fact_id 
 	JOIN GRUPO_43.detalle_factura df ON df.detalle_factura_fact_id = f.fact_nro
@@ -489,5 +489,11 @@ BEGIN
 	JOIN GRUPO_43.bi_dim_medio_pago mp ON mp.tipo_medio_pago = p.pago_medio_de_pago
 	JOIN GRUPO_43.bi_dim_curso cu ON cu.curso_codigo = c.curso_codigo
 	JOIN GRUPO_43.bi_dim_tiempo tv ON tv.fecha = f.fact_fecha_venc
-	JOIN GRUPO_43.bi_dim_tiempo tp ON tp.fecha = p.pago_fecha
+	JOIN GRUPO_43.bi_dim_tiempo tp ON tp.fecha = (
+		SELECT MAX(p2.pago_fecha)
+		FROM GRUPO_43.pago p2
+		WHERE p2.pago_fact_id = f.fact_nro)
+	GROUP BY f.fact_nro
+
 END
+GO
