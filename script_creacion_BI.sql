@@ -53,34 +53,31 @@ CREATE TABLE GRUPO_43.bi_dim_sede(
 
 CREATE TABLE GRUPO_43.bi_dim_alumno(
 	id_dim_alumno INT IDENTITY PRIMARY KEY,
-	alumno_legajo BIGINT NOT NULL, 
-	nombre VARCHAR(255) NOT NULL, 
-	apellido VARCHAR(255) NOT NULL,
 	edad INT NOT NULL
 		CHECK(edad >= 18), 
 	rango_etario INT NOT NULL
-		CHECK(rango_etario BETWEEN 0 AND 3),
-	id_dim_sede_actual INT NOT NULL,
-	FOREIGN KEY(id_dim_sede_actual) REFERENCES GRUPO_43.bi_dim_sede
+		CHECK(rango_etario BETWEEN 0 AND 3)
 ); 
 
 CREATE TABLE GRUPO_43.bi_dim_profesor(
 	id_dim_profesor INT IDENTITY PRIMARY KEY,
-	profesor_id char(8) NOT NULL,
-	nombre varchar(255) NOT NULL,
-	apellido varchar(255) NOT NULL,
 	edad INT NOT NULL
 		CHECK (edad >= 18),
 	rango_etario INT NOT NULL
 		CHECK (rango_etario BETWEEN 0 AND 3)
 );
 
+CREATE TABLE GRUPO_43.bi_dim_categoria(
+    id_dim_categoria INT IDENTITY PRIMARY KEY,
+    nombre_categoria VARCHAR(100) NOT NULL
+);
+
 CREATE TABLE GRUPO_43.bi_dim_curso(
 	id_dim_curso INT IDENTITY PRIMARY KEY, 
 	curso_codigo CHAR(8) NOT NULL, 
-	categoria CHAR(8) NOT NULL,
+	id_dim_categoria INT NOT NULL,
+	FOREIGN KEY(id_dim_categoria) REFERENCES GRUPO_43.bi_dim_categoria(id_dim_categoria)
 ); 
-
 
 CREATE TABLE GRUPO_43.bi_dim_medio_pago(
 	id_dim_medio_pago INT IDENTITY PRIMARY KEY,
@@ -92,7 +89,7 @@ CREATE TABLE GRUPO_43.bi_dim_turno(
 	turno char(8) NOT NULL
 ); 
 
---	Creación de tablas de hechos
+--	Creaci?n de tablas de hechos
 CREATE TABLE GRUPO_43.bi_facto_inscripciones(
 	id_f_insc INT IDENTITY PRIMARY KEY,  
 	id_dim_sede INT NOT NULL,
@@ -232,29 +229,18 @@ BEGIN
 	DELETE FROM GRUPO_43.bi_dim_alumno;
 
 	INSERT INTO GRUPO_43.bi_dim_alumno(
-		alumno_legajo, 
-		nombre, 
-		apellido, 
 		edad, 
-		rango_etario, 
-		id_dim_sede_actual
+		rango_etario
 	)
-	SELECT 
-		alumno_legajo, 
-		alumno_nombre, 
-		alumno_apellido, 
+	SELECT
 		DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()), 
 		CASE
 			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 18 AND 25 THEN 0
 			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 26 AND 35 THEN 1 
 			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 36 AND 50 THEN 2
 			ELSE 3
-		END,
-		ISNULL(curso_sede_id, 'NO ASIGNADO')
+		END
 	FROM GRUPO_43.alumno
-	LEFT JOIN GRUPO_43.inscripcion_curso ON alumno_legajo = inscrip_curso_alumno_legajo
-	LEFT JOIN  GRUPO_43.curso ON inscrip_curso_codigo = curso_codigo
-	LEFT JOIN GRUPO_43.bi_dim_sede ON curso_sede_id = sede_id
 END
 GO
 
@@ -265,16 +251,10 @@ BEGIN
 	DELETE FROM GRUPO_43.bi_dim_profesor; 
 
 	INSERT INTO GRUPO_43.bi_dim_profesor(
-		profesor_id, 
-		nombre, 
-		apellido, 
 		edad, 
 		rango_etario
 	)
 	SELECT 
-		profesor_id, 
-		profesor_nombre, 
-		profesor_apellido,
 		DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()), 
 		CASE
 			WHEN DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()) BETWEEN 18 AND 25 THEN 0
@@ -286,6 +266,21 @@ BEGIN
 END
 GO
 
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_categorias
+AS
+BEGIN
+	SET NOCOUNT ON;
+	DELETE FROM GRUPO_43.bi_dim_categoria;
+
+	INSERT INTO GRUPO_43.bi_dim_categoria(
+		nombre_categoria
+	)
+	SELECT DISTINCT 
+		categoria_descripcion
+	FROM GRUPO_43.categoria
+END
+GO
+
 CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_curso 
 AS
 BEGIN
@@ -294,13 +289,14 @@ BEGIN
 
 	INSERT INTO GRUPO_43.bi_dim_curso(
 		curso_codigo, 
-		categoria
+		id_dim_categoria
 	)
 	SELECT DISTINCT
 		curso_codigo, 
 		detalle_curso_categoria
 	FROM GRUPO_43.curso
 	JOIN GRUPO_43.detalle_curso ON curso_detalle_curso_id = detalle_curso_id
+	JOIN GRUPO_43.bi_dim_categoria ON nombre_categoria = detalle_curso_categoria
 END
 GO
 
@@ -566,6 +562,7 @@ EXEC GRUPO_43.cargar_dimension_alumno;
 EXEC GRUPO_43.cargar_dimension_tiempo;
 EXEC GRUPO_43.cargar_dimension_turno;
 EXEC GRUPO_43.cargar_dimension_medio_pago;
+EXEC GRUPO_43.cargar_categorias;
 EXEC GRUPO_43.cargar_dimension_curso; 
 
 --	EXEC de tablas de hechos
@@ -743,7 +740,7 @@ FROM ranking
 WHERE RN <= 3;
 GO
 
---	10) Índice de satisfacción
+--	10) ?ndice de satisfacción
 CREATE OR ALTER VIEW GRUPO_43.indice_satisfaccion_anual
 AS
 SELECT
