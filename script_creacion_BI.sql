@@ -4,7 +4,7 @@ GO
 DROP VIEW IF EXISTS GRUPO_43.bi_view_categorias_mas_solicitadas; 
 DROP VIEW IF EXISTS  GRUPO_43.bi_view_turnos_mas_solicitados; 
 DROP VIEW IF EXISTS  GRUPO_43.bi_tasa_rechazo_inscripciones;
-DROP VIEW IF EXISTS  GRUPO_43.bi_desempe�o_cursada_por_sede;
+DROP VIEW IF EXISTS  GRUPO_43.bi_desempeño_cursada_por_sede;
 DROP VIEW IF EXISTS  GRUPO_43.bi_tiempo_promedio_finalizacion_curso;
 DROP VIEW IF EXISTS  GRUPO_43.bi_nota_promedio_finales;
 DROP VIEW IF EXISTS  GRUPO_43.bi_tasa_ausentismo_finales;
@@ -30,7 +30,7 @@ IF OBJECT_ID('GRUPO_43.bi_dim_medio_pago', 'U') IS NOT NULL DROP TABLE GRUPO_43.
 IF OBJECT_ID('GRUPO_43.bi_dim_turno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_turno;
 
 
---	Creaci�n de tablas de dimensiones
+--	Creación de tablas de dimensiones
 CREATE TABLE GRUPO_43.bi_dim_tiempo(
 	id_dim_tiempo INT IDENTITY PRIMARY KEY,
 	fecha smalldatetime NOT NULL, 
@@ -89,7 +89,7 @@ CREATE TABLE GRUPO_43.bi_dim_turno(
 	turno char(8) NOT NULL
 ); 
 
---	Creaci?n de tablas de hechos
+--	Creación de tablas de hechos
 CREATE TABLE GRUPO_43.bi_facto_inscripciones(
 	id_f_insc INT IDENTITY PRIMARY KEY,  
 	id_dim_sede INT NOT NULL,
@@ -292,11 +292,11 @@ BEGIN
 		id_dim_categoria
 	)
 	SELECT DISTINCT
-		curso_codigo, 
-		detalle_curso_categoria
-	FROM GRUPO_43.curso
-	JOIN GRUPO_43.detalle_curso ON curso_detalle_curso_id = detalle_curso_id
-	JOIN GRUPO_43.bi_dim_categoria ON nombre_categoria = detalle_curso_categoria
+		c.curso_codigo, 
+		cat.id_dim_categoria
+	FROM GRUPO_43.curso c
+	JOIN GRUPO_43.detalle_curso dc ON c.curso_detalle_curso_id = dc.detalle_curso_id
+	JOIN GRUPO_43.bi_dim_categoria cat ON cat.nombre_categoria = dc.detalle_curso_categoria
 END
 GO
 
@@ -424,7 +424,7 @@ BEGIN
                 AND TRY_CONVERT(date, c.curso_fecha_fin)
 
 
-    -- Evaluaciones (nota m�nima en rango de fechas)
+    -- Evaluaciones (nota mínima en rango de fechas)
    CROSS APPLY (
         SELECT MIN(e.evaluacion_nota) AS nota_minima
         FROM GRUPO_43.evaluacion e
@@ -574,8 +574,8 @@ EXEC GRUPO_43.cargar_facto_finales;
 GO
 
 
---	Creaci�n de vistas
---	1) Categor�as y turnos m�s solicitados
+--	Creación de vistas
+--	1) Categorías y turnos más solicitados
 CREATE OR ALTER VIEW GRUPO_43.bi_view_categorias_mas_solicitadas
 AS
 SELECT TOP 3
@@ -612,21 +612,21 @@ JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = i.id_dim_sede
 GROUP BY s.sede_id, t.mes
 GO
 
---	3) Comparaci�n de desempe�o de cursada por sede
-CREATE OR ALTER VIEW GRUPO_43.bi_desempe�o_cursada_por_sede
+--	3) Comparación de desempeño de cursada por sede
+CREATE OR ALTER VIEW GRUPO_43.bi_desempeño_cursada_por_sede
 AS
 SELECT
 	s.sede_id SEDE,
-	t.anio A�O, 
+	t.anio AÑO, 
 	CAST(COUNT(CASE WHEN c.estado_cursada = 1 THEN 1 END) AS FLOAT) 
-	/ COUNT(*) * 100  DESEMPE�O
+	/ COUNT(*) * 100  DESEMPEÑO
 FROM GRUPO_43.bi_facto_cursadas c
 JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = c.id_dim_sede
 JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = c.id_dim_tiempo_inicio
 GROUP BY s.sede_id, t.anio
 GO
 
---	4) Tiempo promedio de finalizaci�n de curso
+--	4) Tiempo promedio de finalización de curso
 CREATE OR ALTER VIEW GRUPO_43.bi_tiempo_promedio_finalizacion_curso
 AS
 SELECT 
@@ -665,7 +665,7 @@ GO
 CREATE OR ALTER VIEW GRUPO_43.bi_tasa_ausentismo_finales
 AS
 SELECT 
-	t.anio A�O,
+	t.anio AÑO,
 	t.semestre SEMESTRE,
 	s.sede_id SEDE,
 	CAST(COUNT(CASE WHEN f.presencia_final = 0 THEN 1 END) AS FLOAT) 
@@ -676,11 +676,11 @@ JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = f.id_dim_sede
 GROUP BY t.anio, t.semestre, s.sede_id
 GO
 
---	7) Desv�o de pagos
+--	7) Desvío de pagos
 CREATE OR ALTER VIEW GRUPO_43.bi_desvio_pagos
 AS
 SELECT
-	tv.anio A�O,
+	tv.anio AÑO,
 	tv.semestre SEMESTRE,
 	CAST(COUNT(CASE WHEN tp.fecha > tv.fecha AND p.estado_pago = 1 THEN 1 END) AS FLOAT)
 	/ NULLIF(CAST(COUNT (CASE WHEN p.estado_pago = 1 THEN 1 END) AS float), 0) * 100 AS TASA_DESVIOS
@@ -703,14 +703,14 @@ JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = p.id_dim_tiempo_vencimiento
 GROUP BY t.anio, t.mes
 GO
 
---	9) Ingresos por categor�a de cursos
+--	9) Ingresos por categoría de cursos
 
 CREATE VIEW GRUPO_43.ingresos_por_categoria_curso
 AS
 WITH ingresos AS (
 	SELECT
 		s.sede_id SEDE, 
-		t.anio A�O, 
+		t.anio AÑO, 
 		c.categoria CATEGORIA,
 		SUM(p.monto_pagado) INGRESOS
 	FROM GRUPO_43.bi_facto_pagos p 
@@ -722,29 +722,29 @@ WITH ingresos AS (
 ranking AS (
 	SELECT
 		SEDE,
-		A�O,
+		AÑO,
 		CATEGORIA,
 		INGRESOS,
 		ROW_NUMBER() OVER(
-			PARTITION BY SEDE, A�O
+			PARTITION BY SEDE, AÑO
 			ORDER BY INGRESOS DESC
 		) AS RN
 	FROM ingresos
 )
 SELECT
 	SEDE, 
-	A�O, 
+	AÑO, 
 	CATEGORIA,
 	INGRESOS
 FROM ranking
 WHERE RN <= 3;
 GO
 
---	10) ?ndice de satisfacci�n
+--	10) ?ndice de satisfacción
 CREATE OR ALTER VIEW GRUPO_43.indice_satisfaccion_anual
 AS
 SELECT
-	t.anio A�O, 
+	t.anio AÑO, 
 	p.rango_etario RANGO_ETARIO,
 	se.sede_id SEDE,
 	(
@@ -769,7 +769,7 @@ SELECT *
 FROM GRUPO_43.bi_view_turnos_mas_solicitados
 
 SELECT *
-FROM GRUPO_43.bi_desempe�o_cursada_por_sede
+FROM GRUPO_43.bi_desempeño_cursada_por_sede
 
 SELECT *
 FROM GRUPO_43.bi_tiempo_promedio_finalizacion_curso
@@ -790,4 +790,5 @@ SELECT *
 FROM GRUPO_43.ingresos_por_categoria_curso
 
 SELECT *
+
 FROM GRUPO_43.indice_satisfaccion_anual
