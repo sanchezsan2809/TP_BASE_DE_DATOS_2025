@@ -28,56 +28,42 @@ IF OBJECT_ID('GRUPO_43.bi_dim_profesor', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi
 IF OBJECT_ID('GRUPO_43.bi_dim_curso', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_curso;
 IF OBJECT_ID('GRUPO_43.bi_dim_medio_pago', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_medio_pago;
 IF OBJECT_ID('GRUPO_43.bi_dim_turno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_turno;
+IF OBJECT_ID('GRUPO_43.bi_dim_rango_satisfaccion', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_rango_satisfaccion;
 
 
 --	Creación de tablas de dimensiones
 CREATE TABLE GRUPO_43.bi_dim_tiempo(
-	id_dim_tiempo INT IDENTITY PRIMARY KEY,
-	fecha smalldatetime NOT NULL, 
+	id_dim_tiempo INT IDENTITY PRIMARY KEY, 
 	anio INT NOT NULL 
 		CHECK (anio BETWEEN 2000 AND 2025),
-	semestre INT NOT NULL
-		CHECK (semestre IN (1,2)),
+	cuatrimestre INT NOT NULL
+		CHECK (cuatrimestre IN (1,2)),
 	mes INT NOT NULL
-		CHECK(mes BETWEEN 1 AND 12),
-	dia INT NOT NULL
-		CHECK (dia BETWEEN 1 AND 31)
+		CHECK(mes BETWEEN 1 AND 12)
 ); 
 
 CREATE TABLE GRUPO_43.bi_dim_sede(
-	id_dim_sede INT IDENTITY PRIMARY KEY, 
-	sede_id CHAR(8) NOT NULL, 
+	id_dim_sede INT IDENTITY PRIMARY KEY,
 	nombre NVARCHAR(255) NOT NULL
 ); 
 
 
-CREATE TABLE GRUPO_43.bi_dim_alumno(
+CREATE TABLE GRUPO_43.bi_dim_RE_alumno(
 	id_dim_alumno INT IDENTITY PRIMARY KEY,
-	edad INT NOT NULL
-		CHECK(edad >= 18), 
 	rango_etario INT NOT NULL
 		CHECK(rango_etario BETWEEN 0 AND 3)
 ); 
 
-CREATE TABLE GRUPO_43.bi_dim_profesor(
+CREATE TABLE GRUPO_43.bi_dim_RE_profesor(
 	id_dim_profesor INT IDENTITY PRIMARY KEY,
-	edad INT NOT NULL
-		CHECK (edad >= 18),
 	rango_etario INT NOT NULL
-		CHECK (rango_etario BETWEEN 0 AND 3)
+		CHECK (rango_etario BETWEEN 0 AND 2)
 );
 
-CREATE TABLE GRUPO_43.bi_dim_categoria(
-    id_dim_categoria INT IDENTITY PRIMARY KEY,
-    nombre_categoria VARCHAR(100) NOT NULL
+CREATE TABLE GRUPO_43.bi_dim_curso_categoria(
+    id_dim_curso_categoria INT IDENTITY PRIMARY KEY,
+    categoria VARCHAR(255) NOT NULL
 );
-
-CREATE TABLE GRUPO_43.bi_dim_curso(
-	id_dim_curso INT IDENTITY PRIMARY KEY, 
-	curso_codigo CHAR(8) NOT NULL, 
-	id_dim_categoria INT NOT NULL,
-	FOREIGN KEY(id_dim_categoria) REFERENCES GRUPO_43.bi_dim_categoria(id_dim_categoria)
-); 
 
 CREATE TABLE GRUPO_43.bi_dim_medio_pago(
 	id_dim_medio_pago INT IDENTITY PRIMARY KEY,
@@ -89,19 +75,23 @@ CREATE TABLE GRUPO_43.bi_dim_turno(
 	turno char(8) NOT NULL
 ); 
 
+CREATE TABLE GRUPO_43.bi_dim_rango_satisfaccion(
+	id_dim_rango_satisfaccion INT IDENTITY PRIMARY KEY,
+	rango_satisfaccion INT NOT NULL
+		check(rango_satisfaccion BETWEEN 0 AND 2)
+)
+
 --	Creación de tablas de hechos
 CREATE TABLE GRUPO_43.bi_facto_inscripciones(
 	id_f_insc INT IDENTITY PRIMARY KEY,  
 	id_dim_sede INT NOT NULL,
-	id_dim_curso INT NOT NULL, 
-	id_dim_alumno INT NOT NULL, 
+	id_dim_curso_categoria INT NOT NULL, 
 	id_dim_turno INT NOT NULL, 
 	estado_inscripcion BIT, 
 	id_dim_tiempo_inscripcion INT NOT NULL,
 	FOREIGN KEY(id_dim_tiempo_inscripcion) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
-	FOREIGN KEY(id_dim_curso) REFERENCES GRUPO_43.bi_dim_curso, 
-	FOREIGN KEY(id_dim_alumno) REFERENCES GRUPO_43.bi_dim_alumno,
+	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria,
 	FOREIGN KEY(id_dim_turno) REFERENCES GRUPO_43.bi_dim_turno
 ); 
 
@@ -110,64 +100,58 @@ CREATE TABLE GRUPO_43.bi_facto_cursadas(
 	id_dim_tiempo_inicio INT NOT NULL,
 	id_dim_tiempo_finalizacion INT NOT NULL,
 	id_dim_sede INT NOT NULL,
-	id_dim_curso INT NOT NULL,
-	id_dim_alumno INT NOT NULL, 
-	id_dim_profesor INT NOT NULL, 
+	id_dim_curso_categoria INT NOT NULL,
 	estado_cursada BIT,
 	FOREIGN KEY(id_dim_tiempo_inicio) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_tiempo_finalizacion) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
-	FOREIGN KEY(id_dim_curso) REFERENCES GRUPO_43.bi_dim_curso,
-	FOREIGN KEY(id_dim_alumno) REFERENCES GRUPO_43.bi_dim_alumno, 
-	FOREIGN KEY(id_dim_profesor) REFERENCES GRUPO_43.bi_dim_profesor
+	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria,
 ); 
 
 CREATE TABLE GRUPO_43.bi_facto_finales(
 	id_f_final INT IDENTITY PRIMARY KEY,
 	id_dim_tiempo INT NOT NULL,
 	id_dim_sede INT NOT NULL,
-	id_dim_curso INT NOT NULL,
-	id_dim_alumno INT NOT NULL,
+	id_dim_curso_categoria INT NOT NULL,
+	id_dim_RE_alumno INT NOT NULL,
 	nota_final BIGINT,
 	presencia_final BIT NOT NULL,
 	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
-	FOREIGN KEY(id_dim_curso) REFERENCES GRUPO_43.bi_dim_curso, 
-	FOREIGN KEY(id_dim_alumno) REFERENCES GRUPO_43.bi_dim_alumno
+	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria, 
+	FOREIGN KEY(id_dim_RE_alumno) REFERENCES GRUPO_43.bi_dim_RE_alumno
 ); 
 
 CREATE TABLE GRUPO_43.bi_facto_pagos(
 	id_f_pago INT IDENTITY PRIMARY KEY,
-	id_dim_tiempo INT NOT NULL, 
-	id_dim_sede INT NOT NULL, 
-	id_dim_medio_pago INT NOT NULL,
-	id_dim_curso INT NOT NULL,
+	id_dim_tiempo INT NOT NULL,
 	id_dim_tiempo_vencimiento INT NOT NULL,
 	id_dim_tiempo_pago INT NOT NULL,
+	id_dim_sede INT NOT NULL, 
+	id_dim_medio_pago INT NOT NULL,
+	id_dim_curso_categoria INT NOT NULL,
 	monto_facturado decimal(8,2) NOT NULL,
 	monto_pagado decimal(8,2) NOT NULL,
 	estado_pago BIT, 
 	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede, 
 	FOREIGN KEY(id_dim_medio_pago) REFERENCES GRUPO_43.bi_dim_medio_pago,
-	FOREIGN KEY(id_dim_curso) REFERENCES GRUPO_43.bi_dim_curso,
+	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria,
 	FOREIGN KEY(id_dim_tiempo_vencimiento) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_tiempo_pago) REFERENCES GRUPO_43.bi_dim_tiempo 
 ); 
+
 
 CREATE TABLE GRUPO_43.bi_facto_satisfaccion(
 	id_f_encuesta INT IDENTITY PRIMARY KEY,
 	id_dim_tiempo INT NOT NULL, 
 	id_dim_sede INT NOT NULL,
-	id_dim_curso INT NOT NULL, 
-	id_dim_profesor INT NOT NULL,
-	nota_respuesta BIGINT NOT NULL,
-	bloque_satisfaccion INT NOT NULL
-		CHECK(bloque_satisfaccion BETWEEN 0 AND 2), 
+	id_dim_RE_profesor INT NOT NULL,
+	id_dim_bloque_satisfaccion INT NOT NULL, 
 	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede, 
-	FOREIGN KEY(id_dim_curso) REFERENCES GRUPO_43.bi_dim_curso,
-	FOREIGN KEY (id_dim_profesor) REFERENCES GRUPO_43.bi_dim_profesor,
+	FOREIGN KEY (id_dim_RE_profesor) REFERENCES GRUPO_43.bi_dim_RE_profesor,
+	FOREIGN KEY (id_dim_bloque_satisfaccion) REFERENCES GRUPO_43.bi_dim_rango_satisfaccion
 ); 
 GO
 
@@ -185,21 +169,17 @@ BEGIN
 	WHILE @fecha <= @fechafin
 	BEGIN
 		INSERT INTO GRUPO_43.bi_dim_tiempo(
-			fecha,
 			anio,
-			semestre, 
-			mes, 
-			dia
+			cuatrimestre, 
+			mes
 		)
 		VALUES(
-			@fecha, 
 			YEAR(@fecha),
 			CASE WHEN MONTH(@fecha) <= 6 THEN 1 ELSE 2 END, 
-			MONTH(@fecha), 
-			DAY(@fecha)
+			MONTH(@fecha)
 		)
 
-		SET @fecha = DATEADD(DAY, 1, @fecha);
+		SET @fecha = DATEADD(MONTH, 1, @fecha);
 	END
 
 END; 
