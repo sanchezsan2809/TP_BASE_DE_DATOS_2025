@@ -122,8 +122,9 @@ CREATE TABLE GRUPO_43.bi_facto_finales(
 	id_dim_sede INT NOT NULL,
 	id_dim_curso_categoria INT NOT NULL,
 	id_dim_RE_alumno INT NOT NULL,
-	nota_final BIGINT,
-	presencia_final BIT NOT NULL,
+	promedio_final float,
+	ausentes INT NOT NULL,
+	inscriptos INT NOT NULL,
 	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
 	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria, 
@@ -365,7 +366,7 @@ BEGIN
 				THEN 1 ELSE 0
 				END
 		) cursadas_aprobadas,
-		COUNT(DISTINCT ic.inscrip_curso_alumno_legajo) inscriptos
+		COUNT(DISTINCT ic.inscrip_curso_alumno_legajo) inscriptoscd
     FROM GRUPO_43.inscripcion_curso ic 
     JOIN GRUPO_43.curso c 
         ON c.curso_codigo = ic.inscrip_curso_codigo
@@ -427,25 +428,51 @@ BEGIN
 	INSERT INTO GRUPO_43.bi_facto_finales(
 		id_dim_tiempo,
 		id_dim_sede, 
-		id_dim_curso, 
-		id_dim_alumno, 
-		nota_final, 
-		presencia_final
+		id_dim_curso_categoria, 
+		id_dim_RE_alumno, 
+		promedio_final, 
+		ausentes,
+		inscriptos
 	)
 	SELECT
 		t.id_dim_tiempo,
 		s.id_dim_sede,
-		cu.id_dim_curso,
-		a.id_dim_alumno,
-		f.final_nota,
-		f.final_presente
+		cat.id_dim_curso_categoria,
+		rea.id_dim_RE_alumno,
+		AVG(CASE WHEN f.final_presente = 1 THEN f.final_nota END),
+		SUM(
+			CASE WHEN f.final_presente = 0 THEN 1 ELSE 0 END 
+		), 
+		COUNT(DISTINCT f.final_id)
 	FROM GRUPO_43.evaluacion_final f
-	JOIN GRUPO_43.instancia_final ins_f ON ins_f.instancia_final_id = f.final_instancia_final
-	JOIN GRUPO_43.curso c ON ins_f.instancia_final_curso = c.curso_codigo
-	JOIN GRUPO_43.bi_dim_tiempo t ON t.fecha = ins_f.instancia_final_fecha
-	JOIN GRUPO_43.bi_dim_sede s ON s.sede_id = c.curso_sede_id
-	JOIN GRUPO_43.bi_dim_curso cu ON cu.curso_codigo = c.curso_codigo
-	JOIN GRUPO_43.bi_dim_alumno a ON a.alumno_legajo = f.final_alumno_legajo
+	JOIN GRUPO_43.instancia_final ins_f 
+		ON ins_f.instancia_final_id = f.final_instancia_final
+	JOIN GRUPO_43.curso c 
+		ON ins_f.instancia_final_curso = c.curso_codigo
+	JOIN GRUPO_43.detalle_curso dc 
+		ON dc.detalle_curso_id = c.curso_detalle_curso_id
+	JOIN GRUPO_43.bi_dim_tiempo t 
+		ON MONTH(ins_f.instancia_final_fecha) = t.mes
+		AND YEAR(ins_f.instancia_final_fecha) = t.anio
+	JOIN GRUPO_43.bi_dim_curso_categoria cat 
+		ON cat.id_categoria = dc.detalle_curso_categoria
+	JOIN GRUPO_43.bi_dim_sede s 
+		ON s.id_sede = c.curso_sede_id
+	JOIN GRUPO_43.alumno a 
+		ON a.alumno_legajo = f.final_alumno_legajo
+	JOIN GRUPO_43.bi_dim_RE_alumno rea 
+		ON DATEDIFF(YEAR,a.alumno_fecha_nacimiento, ins_f.instancia_final_fecha)
+		- CASE
+			WHEN DATEADD(YEAR, DATEDIFF(YEAR,a.alumno_fecha_nacimiento, ins_f.instancia_final_fecha), a.alumno_fecha_nacimiento)
+				> ins_f.instancia_final_fecha
+			THEN 1 ELSE 0
+		END
+		BETWEEN rea.edad_min AND rea.edad_max
+	GROUP BY
+		t.id_dim_tiempo,
+		s.id_dim_sede,
+		cat.id_dim_curso_categoria,
+		rea.id_dim_RE_alumno
 END
 GO 
 
