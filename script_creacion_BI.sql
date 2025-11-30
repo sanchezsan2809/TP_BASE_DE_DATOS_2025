@@ -108,7 +108,8 @@ CREATE TABLE GRUPO_43.bi_facto_cursadas(
 	id_dim_tiempo_finalizacion INT NOT NULL,
 	id_dim_sede INT NOT NULL,
 	id_dim_curso_categoria INT NOT NULL,
-	estado_cursada BIT,
+	cursadas_aprobadas INT NOT NULL,
+	inscriptos INT NOT NULL,
 	FOREIGN KEY(id_dim_tiempo_inicio) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_tiempo_finalizacion) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
@@ -348,23 +349,23 @@ BEGIN
         id_dim_tiempo_inicio, 
         id_dim_tiempo_finalizacion, 
         id_dim_sede, 
-        id_dim_curso, 
-        id_dim_alumno, 
-        id_dim_profesor, 
-        estado_cursada
+        id_dim_curso_categoria,  
+        cursadas_aprobadas,
+		inscriptos
     )
     SELECT
-        t_ini.id_dim_tiempo, 
-        t_fin.id_dim_tiempo, 
+        ti.id_dim_tiempo, 
+        tf.id_dim_tiempo, 
         sdim.id_dim_sede, 
-        cdim.id_dim_curso,
-        adim.id_dim_alumno, 
-        prodim.id_dim_profesor,
-        CASE 
-            WHEN ISNULL(tp.tp_nota,0) >= 4 
-                 AND ISNULL(eval.nota_minima,0) >= 4 
-            THEN 1 ELSE 0
-        END AS estado_cursada
+        ccat.id_dim_curso_categoria,
+        SUM(
+			CASE 
+				WHEN ISNULL(tp.tp_nota,0) >= 4 
+					 AND ISNULL(eval.nota_minima,0) >= 4 
+				THEN 1 ELSE 0
+				END
+		) cursadas_aprobadas,
+		COUNT(DISTINCT ic.inscrip_curso_alumno_legajo) inscriptos
     FROM GRUPO_43.inscripcion_curso ic 
     JOIN GRUPO_43.curso c 
         ON c.curso_codigo = ic.inscrip_curso_codigo
@@ -372,33 +373,34 @@ BEGIN
         ON a.alumno_legajo = ic.inscrip_curso_alumno_legajo
     JOIN GRUPO_43.profesor p 
 		ON p.profesor_id = c.curso_profesor_id
+	JOIN GRUPO_43.detalle_curso dc 
+		ON dc.detalle_curso_id = c.curso_detalle_curso_id
+	
 	-- Dimensiones
-	JOIN GRUPO_43.bi_dim_re_alumno rea 
-        ON DATEDIFF(YEAR, a.alumno_fecha_nacimiento, ic.inscrip_curso_fecha)
-		BETWEEN rea.edad_min AND rea.edad_max
     JOIN GRUPO_43.bi_dim_curso_categoria ccat
-        ON ccat.id_categoria = c.curso_turno_id
-    JOIN GRUPO_43.bi_dim_RE_profesor rep 
-        ON DATEDIFF(YEAR, p.profesor_fecha_nacimiento, ic.inscrip_curso_fecha)
-		BETWEEN rep.edad_min AND rep.edad_max
+        ON ccat.id_categoria = dc.detalle_curso_categoria
     JOIN GRUPO_43.bi_dim_sede sdim 
         ON sdim.id_sede = c.curso_sede_id
-
-    -- Nota TP
-   JOIN GRUPO_43.bi_dim_tiempo t_ini 
-        ON t_ini.fecha = TRY_CONVERT(date, c.curso_fecha_inicio)
-    JOIN GRUPO_43.bi_dim_tiempo t_fin 
-        ON t_fin.fecha = TRY_CONVERT(date, c.curso_fecha_fin)
-
-    LEFT JOIN GRUPO_43.tp tp
-        ON tp.tp_alumno_legajo = a.alumno_legajo
-        AND tp.tp_curso_codigo = c.curso_codigo
-        AND TRY_CONVERT(date, tp.tp_fecha_evaluacion)
+	JOIN GRUPO_43.bi_dim_tiempo ti 
+		ON MONTH(c.curso_fecha_inicio) = ti.mes
+		AND YEAR(c.curso_fecha_inicio) = ti.anio
+	JOIN GRUPO_43.bi_dim_tiempo tf
+		ON MONTH(c.curso_fecha_fin) = tf.mes
+		AND YEAR(c.curso_fecha_fin) = tf.anio
+    
+	-- Nota TP 
+	OUTER APPLY (
+	   SELECT TOP 1 tp_nota
+	   FROM GRUPO_43.tp tp
+	   WHERE tp.tp_alumno_legajo = a.alumno_legajo
+		 AND tp.tp_curso_codigo = c.curso_codigo
+		 AND TRY_CONVERT(date, tp.tp_fecha_evaluacion)
             BETWEEN TRY_CONVERT(date, c.curso_fecha_inicio)
                 AND TRY_CONVERT(date, c.curso_fecha_fin)
-
-
-    -- Evaluaciones (nota mínima en rango de fechas)
+	   ORDER BY tp_nota DESC
+	) tp
+   
+   -- Evaluaciones (nota mínima en rango de fechas)
    CROSS APPLY (
         SELECT MIN(e.evaluacion_nota) AS nota_minima
         FROM GRUPO_43.evaluacion e
@@ -407,7 +409,12 @@ BEGIN
           AND TRY_CONVERT(date, e.evaluacion_fecha)
                 BETWEEN TRY_CONVERT(date, c.curso_fecha_inicio)
                     AND TRY_CONVERT(date, c.curso_fecha_fin)
-    ) eval;
+    ) eval
+	GROUP BY 
+		ti.id_dim_tiempo, 
+        tf.id_dim_tiempo, 
+        sdim.id_dim_sede,
+		ccat.id_dim_curso_categoria
 END;
 GO
 
