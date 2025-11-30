@@ -44,25 +44,29 @@ CREATE TABLE GRUPO_43.bi_dim_tiempo(
 
 CREATE TABLE GRUPO_43.bi_dim_sede(
 	id_dim_sede INT IDENTITY PRIMARY KEY,
+	id_sede char(8),
 	nombre NVARCHAR(255) NOT NULL
 ); 
 
 
 CREATE TABLE GRUPO_43.bi_dim_RE_alumno(
-	id_dim_alumno INT IDENTITY PRIMARY KEY,
-	rango_etario INT NOT NULL
-		CHECK(rango_etario BETWEEN 0 AND 3)
+	id_dim_RE_alumno INT IDENTITY PRIMARY KEY,
+	rango_etario char(8) NOT NULL,
+	edad_min INT NOT NULL,
+	edad_max INT NOT NULL
 ); 
 
 CREATE TABLE GRUPO_43.bi_dim_RE_profesor(
-	id_dim_profesor INT IDENTITY PRIMARY KEY,
-	rango_etario INT NOT NULL
-		CHECK (rango_etario BETWEEN 0 AND 2)
+	id_dim_RE_profesor INT IDENTITY PRIMARY KEY,
+	rango_etario char(8) NOT NULL,
+	edad_min INT NOT NULL,
+	edad_max INT NOT NULL
 );
 
 CREATE TABLE GRUPO_43.bi_dim_curso_categoria(
     id_dim_curso_categoria INT IDENTITY PRIMARY KEY,
-    categoria VARCHAR(255) NOT NULL
+    id_categoria char(8) NOT NULL,
+	categoria VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE GRUPO_43.bi_dim_medio_pago(
@@ -72,13 +76,15 @@ CREATE TABLE GRUPO_43.bi_dim_medio_pago(
 
 CREATE TABLE GRUPO_43.bi_dim_turno(
 	id_dim_turno INT IDENTITY PRIMARY KEY, 
+	id_turno char(8),
 	turno char(8) NOT NULL
 ); 
 
 CREATE TABLE GRUPO_43.bi_dim_rango_satisfaccion(
 	id_dim_rango_satisfaccion INT IDENTITY PRIMARY KEY,
-	rango_satisfaccion INT NOT NULL
-		check(rango_satisfaccion BETWEEN 0 AND 2)
+	rango_satisfaccion char(8) NOT NULL,
+	nota_min INT NOT NULL,
+	nota_max INT NOT NULL
 )
 
 --	Creación de tablas de hechos
@@ -87,8 +93,9 @@ CREATE TABLE GRUPO_43.bi_facto_inscripciones(
 	id_dim_sede INT NOT NULL,
 	id_dim_curso_categoria INT NOT NULL, 
 	id_dim_turno INT NOT NULL, 
-	estado_inscripcion BIT, 
 	id_dim_tiempo_inscripcion INT NOT NULL,
+	inscripciones_aceptadas INT NOT NULL,
+	inscripciones_rechazadas INT NOT NULL,
 	FOREIGN KEY(id_dim_tiempo_inscripcion) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
 	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria,
@@ -192,7 +199,7 @@ BEGIN
 	DELETE FROM GRUPO_43.bi_dim_sede; 
 
 	INSERT INTO GRUPO_43.bi_dim_sede(
-		sede_id, 
+		id_sede,
 		nombre
 	)
 	SELECT
@@ -202,81 +209,57 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_alumno
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_RE_alumno
 AS
 BEGIN
 	SET NOCOUNT ON;
-	DELETE FROM GRUPO_43.bi_dim_alumno;
+	DELETE FROM GRUPO_43.bi_dim_RE_alumno;
 
-	INSERT INTO GRUPO_43.bi_dim_alumno(
-		edad, 
-		rango_etario
+	INSERT INTO GRUPO_43.bi_dim_RE_alumno(
+		rango_etario,
+		edad_min,
+		edad_max
 	)
-	SELECT
-		DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()), 
-		CASE
-			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 18 AND 25 THEN 0
-			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 26 AND 35 THEN 1 
-			WHEN DATEDIFF(YEAR, alumno_fecha_nacimiento, GETDATE()) BETWEEN 36 AND 50 THEN 2
-			ELSE 3
-		END
-	FROM GRUPO_43.alumno
+	VALUES
+	('<25',18,25),
+	('25 - 35',26, 35),
+	('35 - 50',36, 50),
+	('>50', 51, 110)
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_profesor
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_RE_profesor
 AS
 BEGIN
 	SET NOCOUNT ON;
-	DELETE FROM GRUPO_43.bi_dim_profesor; 
+	DELETE FROM GRUPO_43.bi_dim_RE_profesor; 
 
-	INSERT INTO GRUPO_43.bi_dim_profesor(
-		edad, 
-		rango_etario
+	INSERT INTO GRUPO_43.bi_dim_RE_profesor(
+		rango_etario,
+		edad_min,
+		edad_max
 	)
-	SELECT 
-		DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()), 
-		CASE
-			WHEN DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()) BETWEEN 18 AND 25 THEN 0
-			WHEN DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()) BETWEEN 26 AND 35 THEN 1 
-			WHEN DATEDIFF(YEAR, profesor_fecha_nacimiento, GETDATE()) BETWEEN 36 AND 50 THEN 2
-			ELSE 3
-		END
-	FROM GRUPO_43.profesor
+	VALUES
+	('25 - 35',26, 35),
+	('35 - 50',36, 50),
+	('>50', 51, 110)
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.cargar_categorias
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_curso_categoria
 AS
 BEGIN
 	SET NOCOUNT ON;
-	DELETE FROM GRUPO_43.bi_dim_categoria;
+	DELETE FROM GRUPO_43.bi_dim_curso_categoria;
 
-	INSERT INTO GRUPO_43.bi_dim_categoria(
-		nombre_categoria
+	INSERT INTO GRUPO_43.bi_dim_curso_categoria(
+		id_categoria,
+		categoria
 	)
 	SELECT DISTINCT 
+		categoria_id,
 		categoria_descripcion
 	FROM GRUPO_43.categoria
-END
-GO
-
-CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_curso 
-AS
-BEGIN
-	SET NOCOUNT ON; 
-	DELETE FROM GRUPO_43.bi_dim_curso; 
-
-	INSERT INTO GRUPO_43.bi_dim_curso(
-		curso_codigo, 
-		id_dim_categoria
-	)
-	SELECT DISTINCT
-		c.curso_codigo, 
-		cat.id_dim_categoria
-	FROM GRUPO_43.curso c
-	JOIN GRUPO_43.detalle_curso dc ON c.curso_detalle_curso_id = dc.detalle_curso_id
-	JOIN GRUPO_43.bi_dim_categoria cat ON cat.nombre_categoria = dc.detalle_curso_categoria
 END
 GO
 
@@ -301,10 +284,13 @@ BEGIN
 	DELETE FROM GRUPO_43.bi_dim_turno; 
 
 	INSERT INTO GRUPO_43.bi_dim_turno(
+		id_turno,
 		turno
 	)
-	SELECT DISTINCT ISNULL(turno_descripcion, 'No especificado')
-	FROM GRUPO_43.turno
+	SELECT DISTINCT 
+	turno_id,
+	ISNULL(turno_descripcion, 'No especificado')
+	FROM GRUPO_43.turno 
 END
 GO
 
@@ -318,35 +304,40 @@ BEGIN
     INSERT INTO GRUPO_43.bi_facto_inscripciones(
         id_dim_tiempo_inscripcion, 
         id_dim_sede, 
-        id_dim_curso, 
-        id_dim_alumno, 
+        id_dim_curso_categoria,  
         id_dim_turno, 
-        estado_inscripcion
+        inscripciones_aceptadas,
+		inscripciones_rechazadas
     )
     SELECT
         t.id_dim_tiempo,
         s.id_dim_sede, 
-        c.id_dim_curso,
-        a.id_dim_alumno, 
+        c.id_dim_curso_categoria,
         tu.id_dim_turno,
-        CASE WHEN i.inscrip_curso_estado = 'Confirmada' THEN 1 ELSE 0 END
-    FROM GRUPO_43.inscripcion_curso i
+        SUM(CASE WHEN i.inscrip_curso_estado = 'Confirmada' THEN 1 ELSE 0 END),
+		SUM(CASE WHEN i.inscrip_curso_estado = 'Rechazada' THEN 1 ELSE 0 END)
+	FROM GRUPO_43.inscripcion_curso i
     JOIN GRUPO_43.bi_dim_tiempo t 
-        ON t.fecha = i.inscrip_curso_fecha
+        ON t.anio = YEAR(i.inscrip_curso_fecha)
+		AND t.mes = MONTH(i.inscrip_curso_fecha)
     JOIN GRUPO_43.curso co 
         ON co.curso_codigo = i.inscrip_curso_codigo
     JOIN GRUPO_43.bi_dim_sede s 
-        ON s.sede_id = co.curso_sede_id
-    JOIN GRUPO_43.bi_dim_curso c 
-        ON c.curso_codigo = co.curso_codigo
-    JOIN GRUPO_43.bi_dim_alumno a 
-        ON a.alumno_legajo = i.inscrip_curso_alumno_legajo
-    JOIN GRUPO_43.turno t2
-        ON t2.turno_id = co.curso_turno_id
+        ON s.nombre = co.curso_sede_id
+	JOIN GRUPO_43.detalle_curso dc
+		ON dc.detalle_curso_id = co.curso_detalle_curso_id
+    JOIN GRUPO_43.bi_dim_curso_categoria c 
+        ON c.categoria = dc.detalle_curso_categoria 
     JOIN GRUPO_43.bi_dim_turno tu
-        ON tu.turno = t2.turno_descripcion;
+        ON tu.id_turno = co.curso_turno_id
+	GROUP BY 
+		t.id_dim_tiempo,
+		s.id_dim_sede,
+		c.id_dim_curso_categoria,
+		tu.id_dim_turno
 END
 GO
+
 
 CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_cursadas AS
 BEGIN
@@ -379,16 +370,19 @@ BEGIN
         ON c.curso_codigo = ic.inscrip_curso_codigo
     JOIN GRUPO_43.alumno a 
         ON a.alumno_legajo = ic.inscrip_curso_alumno_legajo
-    
-    -- Dimensiones
-    JOIN GRUPO_43.bi_dim_alumno adim 
-        ON adim.alumno_legajo = a.alumno_legajo
-    JOIN GRUPO_43.bi_dim_curso cdim 
-        ON cdim.curso_codigo = c.curso_codigo
-    JOIN GRUPO_43.bi_dim_profesor prodim 
-        ON prodim.profesor_id = c.curso_profesor_id
+    JOIN GRUPO_43.profesor p 
+		ON p.profesor_id = c.curso_profesor_id
+	-- Dimensiones
+	JOIN GRUPO_43.bi_dim_re_alumno rea 
+        ON DATEDIFF(YEAR, a.alumno_fecha_nacimiento, ic.inscrip_curso_fecha)
+		BETWEEN rea.edad_min AND rea.edad_max
+    JOIN GRUPO_43.bi_dim_curso_categoria ccat
+        ON ccat.id_categoria = c.curso_turno_id
+    JOIN GRUPO_43.bi_dim_RE_profesor rep 
+        ON DATEDIFF(YEAR, p.profesor_fecha_nacimiento, ic.inscrip_curso_fecha)
+		BETWEEN rep.edad_min AND rep.edad_max
     JOIN GRUPO_43.bi_dim_sede sdim 
-        ON sdim.sede_id = c.curso_sede_id
+        ON sdim.id_sede = c.curso_sede_id
 
     -- Nota TP
    JOIN GRUPO_43.bi_dim_tiempo t_ini 
