@@ -684,7 +684,7 @@ WITH turnos_rank AS(
 	FROM GRUPO_43.bi_facto_inscripciones i
 	JOIN GRUPO_43.bi_dim_turno tu
 		ON tu.id_dim_turno = i.id_dim_turno	
-		JOIN GRUPO_43.bi_dim_tiempo t 
+	JOIN GRUPO_43.bi_dim_tiempo t 
 		ON t.id_dim_tiempo = i.id_dim_tiempo_inscripcion
 	JOIN GRUPO_43.bi_dim_sede s
 		ON s.id_dim_sede = i.id_dim_sede
@@ -695,10 +695,10 @@ WITH turnos_rank AS(
 		tu.turno
 )
 SELECT
-	anio,
-	nombre, 
-	turno, 
-	inscripciones_aceptadas
+	anio AÑO,
+	nombre NOMBRE, 
+	turno TURNO, 
+	inscripciones_aceptadas INSCRIPCIONES_ACEPTADAS
 FROM turnos_rank
 WHERE rn <= 3; 
 GO
@@ -708,28 +708,31 @@ GO
 CREATE OR ALTER VIEW GRUPO_43.bi_tasa_rechazo_inscripciones
 AS
 SELECT 
-	s.sede_id SEDE, 
+	s.nombre SEDE, 
+	t.anio AÑO,
 	t.mes MES,
-	CAST(COUNT(CASE WHEN i.estado_inscripcion = 0 THEN 1 END) AS FLOAT) 
-	/ COUNT(*) * 100 TASA_DE_RECHAZO
+	(SUM(i.inscripciones_rechazadas) * 1.0/ SUM(i.inscripciones)) * 100 TASA_RECHAZO
 FROM GRUPO_43.bi_facto_inscripciones i
-JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = i.id_dim_tiempo_inscripcion
-JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = i.id_dim_sede
-GROUP BY s.sede_id, t.mes
+JOIN GRUPO_43.bi_dim_tiempo t 
+	ON t.id_dim_tiempo = i.id_dim_tiempo_inscripcion
+JOIN GRUPO_43.bi_dim_sede s 
+	ON s.id_dim_sede = i.id_dim_sede
+GROUP BY s.nombre, t.anio, t.mes
 GO
 
 --	3) Comparación de desempeño de cursada por sede
 CREATE OR ALTER VIEW GRUPO_43.bi_desempeño_cursada_por_sede
 AS
 SELECT
-	s.sede_id SEDE,
+	s.nombre SEDE,
 	t.anio AÑO, 
-	CAST(COUNT(CASE WHEN c.estado_cursada = 1 THEN 1 END) AS FLOAT) 
-	/ COUNT(*) * 100  DESEMPEÑO
+	(SUM(cursadas_aprobadas) * 1.0 / SUM(inscriptos)) * 100 DESEMPEÑO
 FROM GRUPO_43.bi_facto_cursadas c
-JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = c.id_dim_sede
-JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = c.id_dim_tiempo_inicio
-GROUP BY s.sede_id, t.anio
+JOIN GRUPO_43.bi_dim_sede s 
+	ON s.id_dim_sede = c.id_dim_sede
+JOIN GRUPO_43.bi_dim_tiempo t 
+	ON t.id_dim_tiempo = c.id_dim_tiempo_inicio
+GROUP BY s.nombre, t.anio
 GO
 
 --	4) Tiempo promedio de finalización de curso
