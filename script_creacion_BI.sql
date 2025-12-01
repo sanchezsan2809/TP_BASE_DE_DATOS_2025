@@ -782,29 +782,50 @@ GO
 CREATE OR ALTER VIEW GRUPO_43.bi_tasa_ausentismo_finales
 AS
 SELECT 
+	s.nombre SEDE,
 	t.anio AÑO,
-	t.semestre SEMESTRE,
-	s.sede_id SEDE,
-	CAST(COUNT(CASE WHEN f.presencia_final = 0 THEN 1 END) AS FLOAT) 
-	/ COUNT(*) * 100 AS TASA_AUSENTISMO
+	CASE 
+        WHEN t.cuatrimestre IN (1,2) THEN 1
+        ELSE 2
+    END SEMESTRE, 
+	(SUM(f.ausentes) * 1.0 / SUM(f.inscriptos)) * 100 TASA_AUSENTISMO
 FROM GRUPO_43.bi_facto_finales f
-JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = f.id_dim_tiempo
-JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = f.id_dim_sede
-GROUP BY t.anio, t.semestre, s.sede_id
+JOIN GRUPO_43.bi_dim_tiempo t 
+	ON t.id_dim_tiempo = f.id_dim_tiempo
+JOIN GRUPO_43.bi_dim_sede s 
+	ON s.id_dim_sede = f.id_dim_sede
+GROUP BY 
+	s.nombre,
+	t.anio, 
+	CASE 
+        WHEN t.cuatrimestre IN (1,2) THEN 1
+        ELSE 2
+    END;
 GO
 
 --	7) Desvío de pagos
 CREATE OR ALTER VIEW GRUPO_43.bi_desvio_pagos
 AS
 SELECT
-	tv.anio AÑO,
-	tv.semestre SEMESTRE,
-	CAST(COUNT(CASE WHEN tp.fecha > tv.fecha AND p.estado_pago = 1 THEN 1 END) AS FLOAT)
-	/ NULLIF(CAST(COUNT (CASE WHEN p.estado_pago = 1 THEN 1 END) AS float), 0) * 100 AS TASA_DESVIOS
-FROM GRUPO_43.bi_facto_pagos p
-JOIN GRUPO_43.bi_dim_tiempo tv ON tv.id_dim_tiempo = p.id_dim_tiempo_vencimiento
-JOIN GRUPO_43.bi_dim_tiempo tp ON tp.id_dim_tiempo = p.id_dim_tiempo_pago
-GROUP BY tv.anio, tv.semestre
+	tp.anio AÑO,
+	CASE 
+        WHEN tp.cuatrimestre IN (1,2) THEN 1
+        ELSE 2
+    END SEMESTRE, 
+	SUM(CASE WHEN p.pago_fecha > f.fact_fecha_venc THEN 1 ELSE 0 END) * 1.0 
+	 / COUNT (*) * 100 PAGOS_FUERA_TERMINO
+FROM GRUPO_43.pago p
+JOIN GRUPO_43.factura f
+	ON f.fact_nro = p.pago_fact_id
+JOIN GRUPO_43.bi_dim_tiempo tp 
+	ON tp.anio= YEAR(p.pago_fecha)
+	AND tp.mes = MONTH(p.pago_fecha)
+GROUP BY 
+	tp.anio, 
+	CASE 
+        WHEN tp.cuatrimestre IN (1,2) THEN 1
+        ELSE 2
+    END;
 GO
 
 --	8) Tasa de Morosidad Financiera mensual
