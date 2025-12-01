@@ -94,7 +94,7 @@ CREATE TABLE GRUPO_43.bi_facto_inscripciones(
 	id_dim_curso_categoria INT NOT NULL, 
 	id_dim_turno INT NOT NULL, 
 	id_dim_tiempo_inscripcion INT NOT NULL,
-	inscripciones_aceptadas INT NOT NULL,
+	inscripciones INT NOT NULL,
 	inscripciones_rechazadas INT NOT NULL,
 	FOREIGN KEY(id_dim_tiempo_inscripcion) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
@@ -134,20 +134,13 @@ CREATE TABLE GRUPO_43.bi_facto_finales(
 CREATE TABLE GRUPO_43.bi_facto_pagos(
 	id_f_pago INT IDENTITY PRIMARY KEY,
 	id_dim_tiempo INT NOT NULL,
-	id_dim_tiempo_vencimiento INT NOT NULL,
-	id_dim_tiempo_pago INT NOT NULL,
-	id_dim_sede INT NOT NULL, 
-	id_dim_medio_pago INT NOT NULL,
+	id_dim_sede INT NOT NULL,
 	id_dim_curso_categoria INT NOT NULL,
-	monto_facturado decimal(8,2) NOT NULL,
-	monto_pagado decimal(8,2) NOT NULL,
-	estado_pago BIT, 
+	facturacion_esperada decimal(8,2) NOT NULL,
+	monto_pagado decimal(8,2) NOT NULL
 	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede, 
-	FOREIGN KEY(id_dim_medio_pago) REFERENCES GRUPO_43.bi_dim_medio_pago,
-	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria,
-	FOREIGN KEY(id_dim_tiempo_vencimiento) REFERENCES GRUPO_43.bi_dim_tiempo,
-	FOREIGN KEY(id_dim_tiempo_pago) REFERENCES GRUPO_43.bi_dim_tiempo 
+	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria
 ); 
 
 
@@ -308,7 +301,7 @@ BEGIN
         id_dim_sede, 
         id_dim_curso_categoria,  
         id_dim_turno, 
-        inscripciones_aceptadas,
+        inscripciones,
 		inscripciones_rechazadas
     )
     SELECT
@@ -316,7 +309,7 @@ BEGIN
         s.id_dim_sede, 
         c.id_dim_curso_categoria,
         tu.id_dim_turno,
-        SUM(CASE WHEN i.inscrip_curso_estado = 'Confirmada' THEN 1 ELSE 0 END),
+        COUNT(DISTINCT i.inscrip_curso_numero),
 		SUM(CASE WHEN i.inscrip_curso_estado = 'Rechazada' THEN 1 ELSE 0 END)
 	FROM GRUPO_43.inscripcion_curso i
     JOIN GRUPO_43.bi_dim_tiempo t 
@@ -485,46 +478,39 @@ BEGIN
 	INSERT INTO GRUPO_43.bi_facto_pagos(
 		id_dim_tiempo,
 		id_dim_sede,
-		id_dim_medio_pago,
-		id_dim_curso,
-		id_dim_tiempo_vencimiento,
-		id_dim_tiempo_pago,
-		monto_facturado,
-		monto_pagado,
-		estado_pago
+		id_dim_curso_categoria,
+		facturacion_esperada,
+		monto_pagado
 	)
 	SELECT 
-		tf.id_dim_tiempo,
+		t.id_dim_tiempo,
 		s.id_dim_sede,
-		mp.id_dim_medio_pago,
-		cu.id_dim_curso,
-		tv.id_dim_tiempo,
-		tp.id_dim_tiempo,
-		f.fact_importe_total,
-		SUM(p.pago_importe),
-		CASE WHEN SUM(p.pago_importe) = f.fact_importe_total THEN 1 ELSE 0 END 
-	FROM GRUPO_43.pago p
-	JOIN GRUPO_43.factura f ON f.fact_nro = p.pago_fact_id 
-	JOIN GRUPO_43.detalle_factura df ON df.detalle_factura_fact_id = f.fact_nro
-	JOIN GRUPO_43.curso c ON c.curso_codigo = df.detalle_factura_curso_id 
-	JOIN GRUPO_43.bi_dim_tiempo tf ON tf.fecha = f.fact_fecha_emision
-	JOIN GRUPO_43.bi_dim_sede s ON s.sede_id = c.curso_sede_id
-	JOIN GRUPO_43.bi_dim_medio_pago mp ON mp.tipo_medio_pago = p.pago_medio_de_pago
-	JOIN GRUPO_43.bi_dim_curso cu ON cu.curso_codigo = c.curso_codigo
-	JOIN GRUPO_43.bi_dim_tiempo tv ON tv.fecha = f.fact_fecha_venc
-	JOIN GRUPO_43.bi_dim_tiempo tp ON tp.fecha = (
-		SELECT MAX(p2.pago_fecha)
-		FROM GRUPO_43.pago p2
-		WHERE p2.pago_fact_id = f.fact_nro)
+		cat.id_dim_curso_categoria,
+		SUM(df.detalle_factura_importe),
+		SUM(ISNULL(p.pago_importe, 0))
+	FROM GRUPO_43.factura f
+	LEFT JOIN GRUPO_43.pago p 
+		ON p.pago_fact_id = f.fact_nro
+		AND MONTH(p.pago_fecha) = MONTH(f.fact_fecha_emision)
+		AND YEAR(p.pago_fecha) = YEAR(f.fact_fecha_emision)
+	JOIN GRUPO_43.detalle_factura df 
+		ON df.detalle_factura_fact_id = f.fact_nro
+	JOIN GRUPO_43.curso c 
+		ON c.curso_codigo = df.detalle_factura_curso_id 
+	JOIN GRUPO_43.detalle_curso dc
+		ON dc.detalle_curso_id = c.curso_detalle_curso_id
+	JOIN GRUPO_43.bi_dim_curso_categoria cat
+		ON cat.id_categoria = dc.detalle_curso_categoria
+	JOIN GRUPO_43.bi_dim_sede s 
+		ON s.id_sede = c.curso_sede_id
+	JOIN GRUPO_43.bi_dim_tiempo t
+		ON t.mes = MONTH(f.fact_fecha_emision)
+		AND t.anio = YEAR(f.fact_fecha_emision)
 	GROUP BY 
-		tf.id_dim_tiempo,
-        s.id_dim_sede,
-        mp.id_dim_medio_pago,
-        cu.id_dim_curso,
-        tv.id_dim_tiempo,
-        tp.id_dim_tiempo,
-        f.fact_importe_total;
-
+		id_dim_tiempo,
+		id_dim_sede,
+		id_dim_curso_categoria
+	;
 END
 GO
 
