@@ -129,7 +129,6 @@ CREATE TABLE GRUPO_43.bi_facto_facturacion(
 	id_dim_tiempo INT NOT NULL,
 	id_dim_sede INT NOT NULL,
 	id_dim_curso_categoria INT NOT NULL,
-	id_dim_medio_pago INT NOT NULL,
 	facturacion_esperada decimal(18,2) NOT NULL,
 	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede, 
@@ -627,39 +626,83 @@ EXEC GRUPO_43.cargar_dimension_curso_categoria;
 
 --	EXEC de tablas de hechos
 EXEC GRUPO_43.cargar_facto_satisfaccion;
+EXEC GRUPO_43.cargar_facto_facturacion; 
 EXEC GRUPO_43.cargar_facto_pagos;
 EXEC GRUPO_43.cargar_facto_inscripciones;
 EXEC GRUPO_43.cargar_facto_cursadas;
 EXEC GRUPO_43.cargar_facto_finales;
 GO
 
-SELECT *
-FROM GRUPO_43.bi_facto_pagos
-WHERE id_dim_tiempo = 52 AND id_dim_sede = 3 AND id_dim_curso_categoria = 5
-
 --	Creación de vistas
 --	1) Categorías y turnos más solicitados
 CREATE OR ALTER VIEW GRUPO_43.bi_view_categorias_mas_solicitadas
 AS
-SELECT TOP 3
-	c.categoria CATEGORIA, 
-	COUNT(CASE WHEN i.estado_inscripcion = 1 THEN 1 END) INSCRIPCIONES_ACEPTADAS
-FROM GRUPO_43.bi_facto_inscripciones i
-JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = i.id_dim_curso
-GROUP BY c.categoria
-ORDER BY inscripciones_aceptadas DESC
+WITH categorias_rank AS(
+	SELECT
+		t.anio, 
+		s.nombre,
+		cat.categoria,
+		SUM(i.inscripciones - i.inscripciones_rechazadas) AS inscripciones_aceptadas,
+		ROW_NUMBER() OVER(
+			PARTITION BY t.anio, s.id_dim_sede
+			ORDER BY SUM(i.inscripciones - i.inscripciones_rechazadas) DESC
+		) AS rn
+	FROM GRUPO_43.bi_facto_inscripciones i
+	JOIN GRUPO_43.bi_dim_curso_categoria cat
+		ON cat.id_dim_curso_categoria = i.id_dim_curso_categoria
+	JOIN GRUPO_43.bi_dim_tiempo t 
+		ON t.id_dim_tiempo = i.id_dim_tiempo_inscripcion
+	JOIN GRUPO_43.bi_dim_sede s
+		ON s.id_dim_sede = i.id_dim_sede
+	GROUP BY
+		t.anio,
+		s.id_dim_sede,
+		s.nombre, 
+		cat.categoria
+)
+SELECT
+	anio,
+	nombre, 
+	categoria, 
+	inscripciones_aceptadas
+FROM categorias_rank
+WHERE rn <= 3; 
 GO
 
 CREATE OR ALTER VIEW GRUPO_43.bi_view_turnos_mas_solicitados
 AS
-SELECT TOP 3
-	t.turno TURNO, 
-	COUNT(CASE WHEN i.estado_inscripcion = 1 THEN 1 END) INSCRIPCIONES_ACEPTADAS
-FROM GRUPO_43.bi_facto_inscripciones i
-JOIN GRUPO_43.bi_dim_turno t ON t.id_dim_turno = i.id_dim_turno
-GROUP BY t.turno
-ORDER BY inscripciones_aceptadas DESC
+WITH turnos_rank AS(
+	SELECT
+		t.anio, 
+		s.nombre,
+		tu.turno,
+		SUM(i.inscripciones - i.inscripciones_rechazadas) AS inscripciones_aceptadas,
+		ROW_NUMBER() OVER(
+			PARTITION BY t.anio, s.id_dim_sede
+			ORDER BY SUM(i.inscripciones - i.inscripciones_rechazadas) DESC
+		) AS rn
+	FROM GRUPO_43.bi_facto_inscripciones i
+	JOIN GRUPO_43.bi_dim_turno tu
+		ON tu.id_dim_turno = i.id_dim_turno	
+		JOIN GRUPO_43.bi_dim_tiempo t 
+		ON t.id_dim_tiempo = i.id_dim_tiempo_inscripcion
+	JOIN GRUPO_43.bi_dim_sede s
+		ON s.id_dim_sede = i.id_dim_sede
+	GROUP BY
+		t.anio,
+		s.id_dim_sede,
+		s.nombre, 
+		tu.turno
+)
+SELECT
+	anio,
+	nombre, 
+	turno, 
+	inscripciones_aceptadas
+FROM turnos_rank
+WHERE rn <= 3; 
 GO
+
 
 --	2) Tasa de rechazo de inscripciones
 CREATE OR ALTER VIEW GRUPO_43.bi_tasa_rechazo_inscripciones
