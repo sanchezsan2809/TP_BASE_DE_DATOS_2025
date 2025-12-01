@@ -834,11 +834,16 @@ AS
 SELECT
 	t.anio ANIO,
 	t.mes MES, 
-	CAST(SUM(CASE WHEN p.estado_pago = 0 THEN p.monto_facturado END) AS float)
-	/ NULLIF(SUM(p.monto_facturado), 0) * 100 AS TASA_MOROSIDAD
-FROM GRUPO_43.bi_facto_pagos p
-JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = p.id_dim_tiempo_vencimiento
-GROUP BY t.anio, t.mes
+	((SUM(f.facturacion_esperada) - SUM(ISNULL(p.monto_pagado,0))) 
+		/ SUM(f.facturacion_esperada)) * 100 MOROSIDAD_FINANCIERA
+FROM GRUPO_43.bi_facto_facturacion f
+LEFT JOIN GRUPO_43.bi_facto_pagos p
+	ON p.id_dim_tiempo = f.id_dim_tiempo
+JOIN GRUPO_43.bi_dim_tiempo t 
+	ON t.id_dim_tiempo = f.id_dim_tiempo
+GROUP BY 
+	t.anio, 
+	t.mes; 
 GO
 
 --	9) Ingresos por categoría de cursos
@@ -847,15 +852,21 @@ CREATE VIEW GRUPO_43.ingresos_por_categoria_curso
 AS
 WITH ingresos AS (
 	SELECT
-		s.sede_id SEDE, 
+		s.nombre SEDE, 
 		t.anio AÑO, 
-		c.categoria CATEGORIA,
+		cat.categoria CATEGORIA,
 		SUM(p.monto_pagado) INGRESOS
 	FROM GRUPO_43.bi_facto_pagos p 
-	JOIN GRUPO_43.bi_dim_sede s ON s.id_dim_sede = p.id_dim_sede
-	JOIN GRUPO_43.bi_dim_tiempo t ON t.id_dim_tiempo = p.id_dim_tiempo_pago
-	JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = p.id_dim_curso
-	GROUP BY s.sede_id, t.anio, c.categoria
+	JOIN GRUPO_43.bi_dim_sede s 
+		ON s.id_dim_sede = p.id_dim_sede
+	JOIN GRUPO_43.bi_dim_tiempo t 
+		ON t.id_dim_tiempo = p.id_dim_tiempo
+	JOIN GRUPO_43.bi_dim_curso_categoria cat 
+		ON cat.id_dim_curso_categoria = p.id_dim_curso_categoria
+	GROUP BY 
+		s.nombre, 
+		t.anio, 
+		cat.categoria
 ),
 ranking AS (
 	SELECT
@@ -875,10 +886,11 @@ SELECT
 	CATEGORIA,
 	INGRESOS
 FROM ranking
-WHERE RN <= 3;
+WHERE RN <= 3
+ORDER BY SEDE, AÑO, INGRESOS DESC;
 GO
 
---	10) ?ndice de satisfacción
+--	10) Índice de satisfacción
 CREATE OR ALTER VIEW GRUPO_43.indice_satisfaccion_anual
 AS
 SELECT
