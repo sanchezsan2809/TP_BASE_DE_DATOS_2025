@@ -17,15 +17,16 @@ DROP VIEW IF EXISTS  GRUPO_43.indice_satisfaccion_anual;
 IF OBJECT_ID('GRUPO_43.bi_facto_inscripciones', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_inscripciones;
 IF OBJECT_ID('GRUPO_43.bi_facto_cursadas', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_cursadas;
 IF OBJECT_ID('GRUPO_43.bi_facto_finales', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_finales;
+IF OBJECT_ID('GRUPO_43.bi_facto_facturacion', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_facturacion;
 IF OBJECT_ID('GRUPO_43.bi_facto_pagos', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_pagos;
 IF OBJECT_ID('GRUPO_43.bi_facto_satisfaccion', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_facto_satisfaccion;
 
 --	3) Drop dimensiones
 IF OBJECT_ID('GRUPO_43.bi_dim_tiempo', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_tiempo;
-IF OBJECT_ID('GRUPO_43.bi_dim_alumno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_alumno;
+IF OBJECT_ID('GRUPO_43.bi_dim_RE_alumno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_RE_alumno;
 IF OBJECT_ID('GRUPO_43.bi_dim_sede', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_sede;
-IF OBJECT_ID('GRUPO_43.bi_dim_profesor', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_profesor;
-IF OBJECT_ID('GRUPO_43.bi_dim_curso', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_curso;
+IF OBJECT_ID('GRUPO_43.bi_dim_RE_profesor', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_RE_profesor;
+IF OBJECT_ID('GRUPO_43.bi_dim_curso_categoria', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_curso_categoria;
 IF OBJECT_ID('GRUPO_43.bi_dim_medio_pago', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_medio_pago;
 IF OBJECT_ID('GRUPO_43.bi_dim_turno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_turno;
 
@@ -123,18 +124,29 @@ CREATE TABLE GRUPO_43.bi_facto_finales(
 	FOREIGN KEY(id_dim_RE_alumno) REFERENCES GRUPO_43.bi_dim_RE_alumno
 ); 
 
+CREATE TABLE GRUPO_43.bi_facto_facturacion(
+	id_f_facturacion INT IDENTITY PRIMARY KEY,
+	id_dim_tiempo INT NOT NULL,
+	id_dim_sede INT NOT NULL,
+	id_dim_curso_categoria INT NOT NULL,
+	id_dim_medio_pago INT NOT NULL,
+	facturacion_esperada decimal(18,2) NOT NULL,
+	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo,
+	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede, 
+	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria
+);
+
 CREATE TABLE GRUPO_43.bi_facto_pagos(
 	id_f_pago INT IDENTITY PRIMARY KEY,
 	id_dim_tiempo INT NOT NULL,
 	id_dim_sede INT NOT NULL,
 	id_dim_curso_categoria INT NOT NULL,
-	facturacion_esperada decimal(8,2) NOT NULL,
-	monto_pagado decimal(8,2) NOT NULL
+	id_dim_medio_pago INT NOT NULL,
+	monto_pagado decimal(18,2) NOT NULL,
 	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede, 
 	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria
 ); 
-
 
 CREATE TABLE GRUPO_43.bi_facto_satisfaccion(
 	id_f_encuesta INT IDENTITY PRIMARY KEY,
@@ -234,7 +246,7 @@ BEGIN
 END
 GO
 
-CREATE OR ALTER PROCEDURE GRUPO_43.cargar_curso_categoria
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_curso_categoria
 AS
 BEGIN
 	SET NOCOUNT ON;
@@ -261,9 +273,14 @@ BEGIN
 		tipo_medio_pago
 	)
 	SELECT DISTINCT pago_medio_de_pago
-	FROM GRUPO_43.pago
+	FROM GRUPO_43.pago; 
+
+	INSERT INTO GRUPO_43.bi_dim_medio_pago(tipo_medio_pago)
+	VALUES('Sin pago');
+
 END;
 GO
+
 
 CREATE OR ALTER PROCEDURE GRUPO_43.cargar_dimension_turno
 AS
@@ -462,50 +479,97 @@ BEGIN
 END
 GO 
 
-CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_pagos
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_facturacion
 AS
 BEGIN
-	SET NOCOUNT ON;
-	DELETE FROM GRUPO_43.bi_facto_pagos; 
+	SET NOCOUNT ON; 
+	DELETE FROM GRUPO_43.bi_facto_facturacion; 
 
-	INSERT INTO GRUPO_43.bi_facto_pagos(
-		id_dim_tiempo,
-		id_dim_sede,
-		id_dim_curso_categoria,
-		facturacion_esperada,
-		monto_pagado
+	INSERT INTO GRUPO_43.bi_facto_facturacion(
+		id_dim_tiempo, 
+		id_dim_sede, 
+		id_dim_curso_categoria, 
+		facturacion_esperada
 	)
-	SELECT 
-		t.id_dim_tiempo,
-		s.id_dim_sede,
-		cat.id_dim_curso_categoria,
-		SUM(df.detalle_factura_importe),
-		SUM(ISNULL(p.pago_importe, 0))
+	SELECT
+		t.id_dim_tiempo, 
+		s.id_dim_sede, 
+		cat.id_dim_curso_categoria, 
+		SUM(df.detalle_factura_importe)
 	FROM GRUPO_43.factura f
-	LEFT JOIN GRUPO_43.pago p 
-		ON p.pago_fact_id = f.fact_nro
-		AND MONTH(p.pago_fecha) = MONTH(f.fact_fecha_emision)
-		AND YEAR(p.pago_fecha) = YEAR(f.fact_fecha_emision)
-	JOIN GRUPO_43.detalle_factura df 
+	JOIN GRUPO_43.detalle_factura df
 		ON df.detalle_factura_fact_id = f.fact_nro
 	JOIN GRUPO_43.curso c 
-		ON c.curso_codigo = df.detalle_factura_curso_id 
+		ON c.curso_codigo = df.detalle_factura_curso_id
 	JOIN GRUPO_43.detalle_curso dc
 		ON dc.detalle_curso_id = c.curso_detalle_curso_id
-	JOIN GRUPO_43.bi_dim_curso_categoria cat
-		ON cat.id_categoria = dc.detalle_curso_categoria
-	JOIN GRUPO_43.bi_dim_sede s 
-		ON s.id_sede = c.curso_sede_id
 	JOIN GRUPO_43.bi_dim_tiempo t
 		ON t.mes = MONTH(f.fact_fecha_emision)
 		AND t.anio = YEAR(f.fact_fecha_emision)
+	JOIN GRUPO_43.bi_dim_sede s
+		ON s.id_sede = c.curso_sede_id
+	JOIN GRUPO_43.bi_dim_curso_categoria cat
+		ON cat.id_categoria = dc.detalle_curso_categoria
 	GROUP BY 
-		id_dim_tiempo,
-		id_dim_sede,
-		id_dim_curso_categoria
-	;
+		t.id_dim_tiempo, 
+		s.id_dim_sede, 
+		cat.id_dim_curso_categoria; 
 END
 GO
+
+CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_pagos
+AS
+BEGIN
+	SET NOCOUNT ON; 
+	DELETE FROM GRUPO_43.bi_facto_pagos; 
+
+	INSERT INTO GRUPO_43.bi_facto_pagos(
+		id_dim_tiempo, 
+		id_dim_sede, 
+		id_dim_curso_categoria, 
+		id_dim_medio_pago, 
+		monto_pagado
+	)
+	SELECT
+		t.id_dim_tiempo, 
+		s.id_dim_sede, 
+		cat.id_dim_curso_categoria, 
+		mp.id_dim_medio_pago, 
+		SUM(
+			p.pago_importe *
+			(df.detalle_factura_importe / NULLIF(tf.total_importe, 0))
+		)
+	FROM GRUPO_43.pago p
+	JOIN GRUPO_43.factura f
+		ON f.fact_nro = p.pago_fact_id
+	JOIN GRUPO_43.detalle_factura df
+		ON df.detalle_factura_fact_id = f.fact_nro
+	CROSS APPLY(
+		SELECT SUM(df2.detalle_factura_importe) AS total_importe
+		FROM GRUPO_43.detalle_factura df2
+		WHERE df2.detalle_factura_fact_id = f.fact_nro
+	)tf
+	JOIN GRUPO_43.curso c
+		ON c.curso_codigo = df.detalle_factura_curso_id
+	JOIN GRUPO_43.detalle_curso dc
+		ON dc.detalle_curso_id = c.curso_detalle_curso_id
+	JOIN GRUPO_43.bi_dim_tiempo t
+		ON t.mes = MONTH(p.pago_fecha)
+		AND t.anio = YEAR(p.pago_fecha)
+	JOIN GRUPO_43.bi_dim_sede s 
+		ON s.id_sede = c.curso_sede_id
+	JOIN GRUPO_43.bi_dim_curso_categoria
+		cat ON cat.id_categoria = dc.detalle_curso_categoria
+	JOIN GRUPO_43.bi_dim_medio_pago mp
+		ON mp.tipo_medio_pago = p.pago_medio_de_pago
+	GROUP BY
+		t.id_dim_tiempo, 
+		s.id_dim_sede, 
+		cat.id_dim_curso_categoria, 
+		mp.id_dim_medio_pago;
+END
+GO
+
 
 CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_satisfaccion
 AS
@@ -552,14 +616,14 @@ BEGIN
 END
 GO
 --	EXEC de dimensiones
-EXEC GRUPO_43.cargar_dimension_profesor;
+EXEC GRUPO_43.cargar_dimension_RE_profesor;
 EXEC GRUPO_43.cargar_dimension_sede;
-EXEC GRUPO_43.cargar_dimension_alumno;
+EXEC GRUPO_43.cargar_dimension_RE_alumno;
 EXEC GRUPO_43.cargar_dimension_tiempo;
 EXEC GRUPO_43.cargar_dimension_turno;
 EXEC GRUPO_43.cargar_dimension_medio_pago;
 EXEC GRUPO_43.cargar_dimension_turno;
-EXEC GRUPO_43.cargar_dimension_curso; 
+EXEC GRUPO_43.cargar_dimension_curso_categoria; 
 
 --	EXEC de tablas de hechos
 EXEC GRUPO_43.cargar_facto_satisfaccion;
@@ -569,6 +633,9 @@ EXEC GRUPO_43.cargar_facto_cursadas;
 EXEC GRUPO_43.cargar_facto_finales;
 GO
 
+SELECT *
+FROM GRUPO_43.bi_facto_pagos
+WHERE id_dim_tiempo = 52 AND id_dim_sede = 3 AND id_dim_curso_categoria = 5
 
 --	Creación de vistas
 --	1) Categorías y turnos más solicitados
