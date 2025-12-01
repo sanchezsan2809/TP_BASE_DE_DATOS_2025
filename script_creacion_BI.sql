@@ -28,7 +28,6 @@ IF OBJECT_ID('GRUPO_43.bi_dim_profesor', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi
 IF OBJECT_ID('GRUPO_43.bi_dim_curso', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_curso;
 IF OBJECT_ID('GRUPO_43.bi_dim_medio_pago', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_medio_pago;
 IF OBJECT_ID('GRUPO_43.bi_dim_turno', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_turno;
-IF OBJECT_ID('GRUPO_43.bi_dim_rango_satisfaccion', 'U') IS NOT NULL DROP TABLE GRUPO_43.bi_dim_rango_satisfaccion;
 
 
 --	Creación de tablas de dimensiones
@@ -79,13 +78,6 @@ CREATE TABLE GRUPO_43.bi_dim_turno(
 	id_turno char(8),
 	turno char(8) NOT NULL
 ); 
-
-CREATE TABLE GRUPO_43.bi_dim_rango_satisfaccion(
-	id_dim_rango_satisfaccion INT IDENTITY PRIMARY KEY,
-	rango_satisfaccion char(8) NOT NULL,
-	nota_min INT NOT NULL,
-	nota_max INT NOT NULL
-)
 
 --	Creación de tablas de hechos
 CREATE TABLE GRUPO_43.bi_facto_inscripciones(
@@ -566,7 +558,7 @@ EXEC GRUPO_43.cargar_dimension_alumno;
 EXEC GRUPO_43.cargar_dimension_tiempo;
 EXEC GRUPO_43.cargar_dimension_turno;
 EXEC GRUPO_43.cargar_dimension_medio_pago;
-EXEC GRUPO_43.cargar_categorias;
+EXEC GRUPO_43.cargar_dimension_turno;
 EXEC GRUPO_43.cargar_dimension_curso; 
 
 --	EXEC de tablas de hechos
