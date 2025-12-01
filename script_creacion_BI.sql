@@ -98,13 +98,11 @@ CREATE TABLE GRUPO_43.bi_facto_inscripciones(
 CREATE TABLE GRUPO_43.bi_facto_cursadas(
 	id_f_cursada INT IDENTITY PRIMARY KEY, 
 	id_dim_tiempo_inicio INT NOT NULL,
-	id_dim_tiempo_finalizacion INT NOT NULL,
 	id_dim_sede INT NOT NULL,
 	id_dim_curso_categoria INT NOT NULL,
 	cursadas_aprobadas INT NOT NULL,
 	inscriptos INT NOT NULL,
-	FOREIGN KEY(id_dim_tiempo_inicio) REFERENCES GRUPO_43.bi_dim_tiempo,
-	FOREIGN KEY(id_dim_tiempo_finalizacion) REFERENCES GRUPO_43.bi_dim_tiempo, 
+	FOREIGN KEY(id_dim_tiempo_inicio) REFERENCES GRUPO_43.bi_dim_tiempo, 
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede,
 	FOREIGN KEY(id_dim_curso_categoria) REFERENCES GRUPO_43.bi_dim_curso_categoria,
 ); 
@@ -350,15 +348,13 @@ BEGIN
 
     INSERT INTO GRUPO_43.bi_facto_cursadas(
         id_dim_tiempo_inicio, 
-        id_dim_tiempo_finalizacion, 
         id_dim_sede, 
         id_dim_curso_categoria,  
         cursadas_aprobadas,
 		inscriptos
     )
     SELECT
-        ti.id_dim_tiempo, 
-        tf.id_dim_tiempo, 
+        ti.id_dim_tiempo,
         sdim.id_dim_sede, 
         ccat.id_dim_curso_categoria,
         SUM(
@@ -387,9 +383,6 @@ BEGIN
 	JOIN GRUPO_43.bi_dim_tiempo ti 
 		ON MONTH(c.curso_fecha_inicio) = ti.mes
 		AND YEAR(c.curso_fecha_inicio) = ti.anio
-	JOIN GRUPO_43.bi_dim_tiempo tf
-		ON MONTH(c.curso_fecha_fin) = tf.mes
-		AND YEAR(c.curso_fecha_fin) = tf.anio
     
 	-- Nota TP 
 	OUTER APPLY (
@@ -414,8 +407,7 @@ BEGIN
                     AND TRY_CONVERT(date, c.curso_fecha_fin)
     ) eval
 	GROUP BY 
-		ti.id_dim_tiempo, 
-        tf.id_dim_tiempo, 
+		ti.id_dim_tiempo,
         sdim.id_dim_sede,
 		ccat.id_dim_curso_categoria
 END;
@@ -739,35 +731,51 @@ GO
 CREATE OR ALTER VIEW GRUPO_43.bi_tiempo_promedio_finalizacion_curso
 AS
 SELECT 
-	c.categoria CATEGORIA,
+	cat.categoria CATEGORIA,
 	ti.anio ANIO_INICIO,
-	AVG(DATEDIFF(DAY, ti.fecha, tf.fecha)) PROMEDIO_TIEMPO_FINALIZACION
-FROM GRUPO_43.bi_facto_cursadas cu
-JOIN GRUPO_43.bi_dim_tiempo ti ON ti.id_dim_tiempo = cu.id_dim_tiempo_inicio
-JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = cu.id_dim_curso
-JOIN GRUPO_43.bi_dim_alumno a ON a.id_dim_alumno = cu.id_dim_alumno
-JOIN GRUPO_43.bi_facto_finales f 
-	ON f.id_dim_curso = c.id_dim_curso
-	AND f.id_dim_alumno = a.id_dim_alumno
-JOIN GRUPO_43.bi_dim_tiempo tf ON tf.id_dim_tiempo = f.id_dim_tiempo
-WHERE cu.estado_cursada = 1
-GROUP BY c.categoria, ti.anio
+	AVG(DATEDIFF(MONTH, DATEFROMPARTS(ti.anio, ti.mes, 1), DATEFROMPARTS(tf.anio, tf.mes, 1))) PROMEDIO_TIEMPO_FINALIZACION
+FROM GRUPO_43.bi_facto_finales f
+JOIN GRUPO_43.bi_facto_cursadas c
+	ON c.id_dim_curso_categoria = f.id_dim_curso_categoria
+	AND c.id_dim_sede = f.id_dim_sede
+JOIN GRUPO_43.bi_dim_tiempo ti
+	ON c.id_dim_tiempo_inicio = ti.id_dim_tiempo
+JOIN GRUPO_43.bi_dim_tiempo tf
+	ON tf.id_dim_tiempo = f.id_dim_tiempo
+JOIN GRUPO_43.bi_dim_curso_categoria cat
+	ON cat.id_dim_curso_categoria = f.id_dim_curso_categoria
+GROUP BY 
+	cat.categoria, 
+	ti.anio;
 GO
 
 --	5) Nota promedio de finales
 CREATE OR ALTER VIEW GRUPO_43.bi_nota_promedio_finales
 AS
 SELECT
-	a.rango_etario RANGO_ETARIO,
-	c.categoria,
+	rea.rango_etario RANGO_ETARIO,
+	cat.categoria,
 	t.anio,
-	t.semestre,
-	AVG(CAST((f.nota_final) AS DECIMAL(10,2))) PROMEDIO_NOTA
+	CASE
+		WHEN t.cuatrimestre IN (1,2) THEN 1
+		ELSE 2
+	END SEMESTRE,
+	AVG(f.promedio_final) PROMEDIO_NOTA
 FROM GRUPO_43.bi_facto_finales f
-JOIN GRUPO_43.bi_dim_tiempo t ON f.id_dim_tiempo = t.id_dim_tiempo
-JOIN GRUPO_43.bi_dim_alumno a ON a.id_dim_alumno = f.id_dim_alumno
-JOIN GRUPO_43.bi_dim_curso c ON c.id_dim_curso = f.id_dim_curso
-GROUP BY a.rango_etario, c.categoria, t.anio, t.semestre
+JOIN GRUPO_43.bi_dim_tiempo t 
+	ON f.id_dim_tiempo = t.id_dim_tiempo
+JOIN GRUPO_43.bi_dim_RE_alumno rea 
+	ON rea.id_dim_RE_alumno= f.id_dim_RE_alumno
+JOIN GRUPO_43.bi_dim_curso_categoria cat 
+	ON cat.id_dim_curso_categoria = f.id_dim_curso_categoria
+GROUP BY 
+	rea.rango_etario, 
+	cat.categoria, 
+	t.anio, 
+	CASE 
+        WHEN t.cuatrimestre IN (1,2) THEN 1
+        ELSE 2
+    END;
 GO
 
 --	6) Tasa de ausentismo finales
