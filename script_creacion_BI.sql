@@ -149,11 +149,12 @@ CREATE TABLE GRUPO_43.bi_facto_satisfaccion(
 	id_dim_tiempo INT NOT NULL, 
 	id_dim_sede INT NOT NULL,
 	id_dim_RE_profesor INT NOT NULL,
-	id_dim_bloque_satisfaccion INT NOT NULL, 
+	satisfechos INT NOT NULL,
+	neutrales INT NOT NULL,
+	insatisfechos INT NOT NULL,
 	FOREIGN KEY(id_dim_tiempo) REFERENCES GRUPO_43.bi_dim_tiempo,
 	FOREIGN KEY(id_dim_sede) REFERENCES GRUPO_43.bi_dim_sede, 
 	FOREIGN KEY (id_dim_RE_profesor) REFERENCES GRUPO_43.bi_dim_RE_profesor,
-	FOREIGN KEY (id_dim_bloque_satisfaccion) REFERENCES GRUPO_43.bi_dim_rango_satisfaccion
 ); 
 GO
 
@@ -523,30 +524,39 @@ BEGIN
 	INSERT INTO GRUPO_43.bi_facto_satisfaccion(
 		id_dim_tiempo, 
 		id_dim_sede,
-		id_dim_curso,
-		id_dim_profesor,
-		nota_respuesta,
-		bloque_satisfaccion
+		id_dim_RE_profesor,
+		satisfechos,
+		neutrales,
+		insatisfechos
 	)
 	SELECT
 		t.id_dim_tiempo,
 		s.id_dim_sede,
-		cu.id_dim_curso,
-		p.id_dim_profesor,
-		de.detalle_encuesta_nota,
-		CASE WHEN de.detalle_encuesta_nota < 5 THEN 0 
-		WHEN de.detalle_encuesta_nota < 7 THEN 1
-		ELSE 2
-		END
+		rep.id_dim_RE_profesor,
+		SUM(CASE WHEN de.detalle_encuesta_nota BETWEEN 7 AND 10 THEN 1 ELSE 0 END),
+		SUM(CASE WHEN de.detalle_encuesta_nota BETWEEN 5 AND 6 THEN 1 ELSE 0 END),
+		SUM(CASE WHEN de.detalle_encuesta_nota <= 4 THEN 1 ELSE 0 END)
 	FROM GRUPO_43.encuesta e
 	JOIN GRUPO_43.detalle_encuesta de 
 		ON de.detalle_encuesta_curso_id = e.encuesta_curso_id 
 		AND de.detalle_encuesta_fecha_registro = e.encuesta_fecha_registro
-	JOIN GRUPO_43.curso c ON c.curso_codigo = e.encuesta_curso_id
-	JOIN GRUPO_43.bi_dim_tiempo t ON t.fecha = de.detalle_encuesta_fecha_registro
-	JOIN GRUPO_43.bi_dim_sede s ON s.sede_id = c.curso_sede_id
-	JOIN GRUPO_43.bi_dim_curso cu ON cu.curso_codigo = c.curso_codigo
-	JOIN GRUPO_43.bi_dim_profesor p ON p.profesor_id = c.curso_profesor_id
+	JOIN GRUPO_43.curso c 
+		ON c.curso_codigo = e.encuesta_curso_id
+	JOIN GRUPO_43.profesor p 
+		ON p.profesor_id = c.curso_profesor_id
+	JOIN GRUPO_43.bi_dim_tiempo t 
+		ON t.mes = MONTH(de.detalle_encuesta_fecha_registro)
+		AND t.anio = YEAR(de.detalle_encuesta_fecha_registro)
+	JOIN GRUPO_43.bi_dim_sede s 
+		ON s.id_sede = c.curso_sede_id
+	JOIN GRUPO_43.bi_dim_RE_profesor rep 
+		ON DATEDIFF(YEAR, p.profesor_fecha_nacimiento, e.encuesta_fecha_registro)
+		BETWEEN rep.edad_min AND rep.edad_max
+	GROUP BY
+		t.id_dim_tiempo,
+		s.id_dim_sede,
+		rep.id_dim_RE_profesor
+	;
 END
 GO
 --	EXEC de dimensiones
