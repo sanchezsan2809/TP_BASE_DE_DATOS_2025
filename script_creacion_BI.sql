@@ -325,11 +325,11 @@ BEGIN
     JOIN GRUPO_43.curso co 
         ON co.curso_codigo = i.inscrip_curso_codigo
     JOIN GRUPO_43.bi_dim_sede s 
-        ON s.nombre = co.curso_sede_id
+        ON s.id_sede = co.curso_sede_id
 	JOIN GRUPO_43.detalle_curso dc
 		ON dc.detalle_curso_id = co.curso_detalle_curso_id
     JOIN GRUPO_43.bi_dim_curso_categoria c 
-        ON c.categoria = dc.detalle_curso_categoria 
+        ON c.id_categoria = dc.detalle_curso_categoria 
     JOIN GRUPO_43.bi_dim_turno tu
         ON tu.id_turno = co.curso_turno_id
 	GROUP BY 
@@ -339,7 +339,6 @@ BEGIN
 		tu.id_dim_turno
 END
 GO
-
 
 CREATE OR ALTER PROCEDURE GRUPO_43.cargar_facto_cursadas AS
 BEGIN
@@ -631,10 +630,10 @@ CREATE OR ALTER VIEW GRUPO_43.bi_view_categorias_mas_solicitadas
 AS
 WITH categorias_rank AS(
 	SELECT
-		t.anio, 
-		s.nombre,
-		cat.categoria,
-		SUM(i.inscripciones - i.inscripciones_rechazadas) AS inscripciones_aceptadas,
+		t.anio AÑO, 
+		s.nombre NOMBRE,
+		cat.categoria CATEGORIA,
+		SUM(i.inscripciones - i.inscripciones_rechazadas) AS INSCRIPCIONES_ACEPTADAS,
 		ROW_NUMBER() OVER(
 			PARTITION BY t.anio, s.id_dim_sede
 			ORDER BY SUM(i.inscripciones - i.inscripciones_rechazadas) DESC
@@ -653,13 +652,14 @@ WITH categorias_rank AS(
 		cat.categoria
 )
 SELECT
-	anio,
-	nombre, 
-	categoria, 
-	inscripciones_aceptadas
+	AÑO,
+	NOMBRE, 
+	CATEGORIA, 
+	INSCRIPCIONES_ACEPTADAS
 FROM categorias_rank
 WHERE rn <= 3; 
 GO
+
 
 CREATE OR ALTER VIEW GRUPO_43.bi_view_turnos_mas_solicitados
 AS
@@ -738,6 +738,7 @@ FROM GRUPO_43.bi_facto_finales f
 JOIN GRUPO_43.bi_facto_cursadas c
 	ON c.id_dim_curso_categoria = f.id_dim_curso_categoria
 	AND c.id_dim_sede = f.id_dim_sede
+	AND f.id_dim_tiempo >= c.id_dim_tiempo_inicio
 JOIN GRUPO_43.bi_dim_tiempo ti
 	ON c.id_dim_tiempo_inicio = ti.id_dim_tiempo
 JOIN GRUPO_43.bi_dim_tiempo tf
@@ -887,7 +888,6 @@ SELECT
 	INGRESOS
 FROM ranking
 WHERE RN <= 3
-ORDER BY SEDE, AÑO, INGRESOS DESC;
 GO
 
 --	10) Índice de satisfacción
@@ -944,5 +944,4 @@ SELECT *
 FROM GRUPO_43.ingresos_por_categoria_curso
 
 SELECT *
-
 FROM GRUPO_43.indice_satisfaccion_anual
